@@ -9,64 +9,78 @@
     <script src="config.js"></script>
     <style>.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }</style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex items-center justify-center md:p-4">
+<body class="bg-gray-100 text-gray-900 font-sans min-h-screen flex items-center justify-center md:p-4">
 
-    <div id="toast" class="fixed top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-xl opacity-0 transition-all z-[300] pointer-events-none text-sm font-bold w-max max-w-[90vw] text-center"></div>
+    <div id="toast" class="fixed top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-lg opacity-0 transition-all z-[300] pointer-events-none text-sm font-bold w-max max-w-[90vw] text-center"></div>
 
-    <div class="w-full max-w-md bg-white md:rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[100dvh] md:h-[750px] p-6">
+    <div class="w-full max-w-md bg-white md:rounded-2xl shadow-xl overflow-hidden flex flex-col h-[100dvh] md:h-[750px] p-6">
         
         <div class="text-center mb-8 mt-4">
-            <h1 class="text-3xl font-black text-indigo-600 tracking-tighter">MANNAJA</h1>
-            <p class="text-xs text-slate-400 font-bold mt-1">멀티 보드게임 플랫폼</p>
+            <h1 class="text-3xl font-black text-gray-900 tracking-tighter">MANNAJA</h1>
+            <p class="text-xs text-gray-400 font-bold mt-1 tracking-widest uppercase">Boardgame Hub</p>
         </div>
 
         <div id="screen-auth" class="hidden space-y-4 my-auto">
-            <input type="email" id="email" placeholder="이메일" class="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-medium">
-            <input type="password" id="password" placeholder="비밀번호" class="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-medium">
-            <input type="text" id="nickname" placeholder="닉네임 (가입 시)" class="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-bold">
+            <input type="email" id="email" placeholder="이메일" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none font-medium focus:border-gray-400 transition-colors">
+            <input type="password" id="password" placeholder="비밀번호" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none font-medium focus:border-gray-400 transition-colors">
+            <input type="text" id="nickname" placeholder="닉네임 (가입 시)" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none font-bold focus:border-gray-400 transition-colors">
             <div class="flex gap-2 pt-2">
-                <button onclick="handleAuth('login')" class="flex-1 bg-slate-800 text-white py-4 rounded-2xl font-bold shadow-lg">로그인</button>
-                <button onclick="handleAuth('signup')" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-100">회원가입</button>
+                <button onclick="handleAuth('login')" class="flex-1 bg-black text-white py-4 rounded-xl font-bold shadow-md hover:bg-gray-800 transition-colors">로그인</button>
+                <button onclick="handleAuth('signup')" class="flex-1 bg-gray-200 text-gray-800 py-4 rounded-xl font-bold hover:bg-gray-300 transition-colors">회원가입</button>
             </div>
         </div>
 
         <div id="screen-dashboard" class="hidden flex-col h-full overflow-hidden">
-            <div class="flex justify-between items-center bg-indigo-50 p-4 rounded-2xl border border-indigo-100 mb-6 flex-shrink-0">
-                <span id="user-display" class="font-bold text-indigo-600"></span>
-                <button onclick="handleLogout()" class="text-xs text-slate-400 font-bold underline">로그아웃</button>
+            <div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6 flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <span id="user-display" class="font-bold text-gray-900"></span>
+                    <button onclick="openProfileModal()" class="text-[10px] bg-gray-200 text-gray-600 px-2 py-1 rounded font-bold hover:bg-gray-300 transition-colors">정보 수정</button>
+                </div>
+                <button onclick="handleLogout()" class="text-xs text-gray-400 font-bold hover:text-gray-600 transition-colors">로그아웃</button>
             </div>
             
             <div class="flex-1 overflow-y-auto no-scrollbar space-y-6">
                 <div>
-                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">참여 중인 게임</h3>
+                    <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">참여 중인 게임</h3>
                     <div id="my-game-list" class="space-y-2"></div>
                 </div>
 
                 <div>
-                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 border-t pt-4">게임 히스토리 (나간 방)</h3>
+                    <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 border-t border-gray-100 pt-4">게임 히스토리</h3>
                     <div id="my-history-list" class="space-y-2"></div>
                 </div>
             </div>
 
-            <div class="space-y-3 pt-4 border-t mt-2 flex-shrink-0">
+            <div class="space-y-3 pt-4 border-t border-gray-100 mt-2 flex-shrink-0">
                 <div class="flex gap-2">
-                    <select id="gameType" class="w-1/3 p-4 bg-slate-50 border rounded-2xl outline-none font-bold text-sm text-slate-600">
+                    <select id="gameType" class="w-1/3 p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none font-bold text-sm text-gray-700">
                         <option value="mind">마음의 실타래</option>
-                        </select>
-                    <input type="text" id="roomName" placeholder="새 방 이름" class="flex-1 p-4 bg-slate-50 border rounded-2xl outline-none font-bold text-sm">
+                    </select>
+                    <input type="text" id="roomName" placeholder="새 방 이름" class="flex-1 p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none font-bold text-sm">
                 </div>
-                <button onclick="createRoom()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-100">새 게임 방 만들기</button>
+                <button onclick="createRoom()" class="w-full bg-black text-white py-4 rounded-xl font-bold shadow-md hover:bg-gray-800 transition-colors">새 방 만들기</button>
                 
-                <div class="flex gap-2 pt-2 border-t mt-2">
-                    <input type="text" id="joinCode" placeholder="초대 코드 입력" class="w-2/3 p-4 bg-slate-50 border rounded-2xl outline-none uppercase font-bold text-sm">
-                    <button onclick="joinRoomByCode()" class="w-1/3 bg-slate-800 text-white py-4 rounded-2xl font-bold shadow-lg">입장</button>
+                <div class="flex gap-2 pt-2 border-t border-gray-100 mt-2">
+                    <input type="text" id="joinCode" placeholder="초대 코드 입력" class="w-2/3 p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none uppercase font-bold text-sm">
+                    <button onclick="joinRoomByCode()" class="w-1/3 bg-gray-200 text-gray-800 py-4 rounded-xl font-bold hover:bg-gray-300 transition-colors">코드 입장</button>
                 </div>
             </div>
         </div>
 
     </div>
 
-    <div id="loading" class="hidden fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-[400]"><span class="text-indigo-600 font-black animate-pulse">LOADING...</span></div>
+    <div id="modal-profile" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[240] p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h2 class="font-black text-lg mb-4 text-gray-900">닉네임 변경</h2>
+            <input type="text" id="profileNameInput" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none font-bold mb-4" placeholder="새 닉네임 입력">
+            <div class="flex gap-2">
+                <button onclick="closeProfileModal()" class="flex-1 py-4 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-colors">취소</button>
+                <button onclick="handleUpdateProfile()" class="flex-1 py-4 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-colors">변경 적용</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading" class="hidden fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-[400]"><span class="text-gray-900 font-black tracking-widest animate-pulse">LOADING</span></div>
 
     <script>
         const supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
@@ -102,7 +116,7 @@
                 const { error } = await supabaseClient.auth.signUp({ email, password, options: { data: { display_name: nickname } } });
                 showLoading(false);
                 if (error) return showToast(error.message);
-                showToast("가입 완료! 로그인 해주세요.");
+                showToast("가입 완료. 로그인 해주세요.");
             } else {
                 const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
                 showLoading(false);
@@ -112,20 +126,31 @@
         }
         async function handleLogout() { await supabaseClient.auth.signOut(); location.reload(); }
 
-        const gameNames = { 'mind': '마음의 실타래' }; // 게임 이름 매핑
+        function openProfileModal() { document.getElementById('profileNameInput').value = user.user_metadata.display_name || ""; document.getElementById('modal-profile').classList.remove('hidden'); }
+        function closeProfileModal() { document.getElementById('modal-profile').classList.add('hidden'); }
+        async function handleUpdateProfile() {
+            const n = document.getElementById('profileNameInput').value.trim(); if(!n) return;
+            showLoading(true);
+            await supabaseClient.auth.updateUser({ data: { display_name: n } });
+            await supabaseClient.from('game_players').update({ user_name: n }).eq('user_id', user.id);
+            user.user_metadata.display_name = n; document.getElementById('user-display').innerText = n;
+            showToast("변경 완료"); closeProfileModal(); showLoading(false);
+        }
+
+        const gameNames = { 'mind': '마음의 실타래' };
 
         function createGameListItem(i, isActive) {
             const gameTitle = gameNames[i.game_rooms.game_type] || i.game_rooms.game_type;
             return `
-                <div onclick="goToGame('${i.game_rooms.game_type}', '${i.room_code}')" class="p-3 bg-white border border-slate-200 rounded-xl flex justify-between items-center cursor-pointer hover:border-indigo-500 shadow-sm transition-all group ${isActive ? '' : 'opacity-60'}">
+                <div onclick="goToGame('${i.game_rooms.game_type}', '${i.room_code}')" class="p-4 bg-white border border-gray-200 rounded-xl flex justify-between items-center cursor-pointer hover:border-gray-400 shadow-sm transition-all group ${isActive ? '' : 'opacity-60'}">
                     <div>
-                        <h4 class="font-bold text-slate-700 text-sm group-hover:text-indigo-600 flex items-center gap-1.5">
+                        <h4 class="font-bold text-gray-800 text-sm group-hover:text-black flex items-center gap-2">
                             ${i.game_rooms.room_name}
-                            ${!isActive ? '<span class="text-[8px] bg-slate-200 text-slate-500 px-1 py-0.5 rounded font-black">나감</span>' : ''}
+                            ${!isActive ? '<span class="text-[8px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-sm font-black tracking-widest">종료/나감</span>' : ''}
                         </h4>
-                        <p class="text-[9px] font-black text-slate-400 mt-0.5"><span class="bg-indigo-50 text-indigo-500 px-1 rounded mr-1">${gameTitle}</span> CODE: ${i.room_code}</p>
+                        <p class="text-[10px] font-bold text-gray-400 mt-1"><span class="text-gray-500 mr-2">${gameTitle}</span> CODE: <span class="text-gray-700">${i.room_code}</span></p>
                     </div>
-                    <span class="text-indigo-200 group-hover:text-indigo-600 font-black text-xs">${isActive ? '➔ 입장' : '↺ 재입장'}</span>
+                    <span class="text-gray-300 group-hover:text-black font-black text-xs transition-colors">${isActive ? '입장' : '재입장'}</span>
                 </div>
             `;
         }
@@ -139,8 +164,8 @@
             const activeData = validData.filter(i => i.is_active !== false);
             const historyData = validData.filter(i => i.is_active === false);
 
-            activeList.innerHTML = activeData.length ? activeData.map(i => createGameListItem(i, true)).join('') : `<p class="text-center py-4 text-xs text-slate-300 font-bold bg-slate-50 rounded-2xl">참여 중인 게임이 없습니다.</p>`;
-            historyList.innerHTML = historyData.length ? historyData.map(i => createGameListItem(i, false)).join('') : `<p class="text-center py-4 text-xs text-slate-300 font-bold bg-slate-50 rounded-2xl">히스토리가 없습니다.</p>`;
+            activeList.innerHTML = activeData.length ? activeData.map(i => createGameListItem(i, true)).join('') : `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-gray-50 rounded-xl">참여 중인 게임이 없습니다.</p>`;
+            historyList.innerHTML = historyData.length ? historyData.map(i => createGameListItem(i, false)).join('') : `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-gray-50 rounded-xl">기록이 없습니다.</p>`;
         }
 
         async function createRoom() {
@@ -150,11 +175,10 @@
             
             showLoading(true);
             const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-            // DB에 방 생성 시 game_type도 함께 저장
             const { error } = await supabaseClient.from('game_rooms').insert([{ room_code: code, room_name: name, game_type: type }]);
             showLoading(false);
             
-            if(error) return showToast("방 생성 실패");
+            if(error) return showToast("생성 실패");
             goToGame(type, code);
         }
 
@@ -170,10 +194,7 @@
             goToGame(room.game_type, code);
         }
 
-        // 해당 게임의 HTML 파일로 코드를 달아서 이동
-        function goToGame(gameType, code) {
-            window.location.href = `${gameType}.html?code=${code}`;
-        }
+        function goToGame(gameType, code) { window.location.href = `${gameType}.html?code=${code}`; }
     </script>
 </body>
 </html>
