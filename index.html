@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MANNAJA - 종합 보드게임 플랫폼</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <style>.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }</style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex items-center justify-center md:p-4">
+
+    <div id="toast" class="fixed top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-xl opacity-0 transition-all z-[300] pointer-events-none text-sm font-bold w-max max-w-[90vw] text-center"></div>
+
+    <div class="w-full max-w-md bg-white md:rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[100dvh] md:h-[750px] p-6">
+        
+        <div class="text-center mb-8 mt-4">
+            <h1 class="text-3xl font-black text-indigo-600 tracking-tighter">MANNAJA</h1>
+            <p class="text-xs text-slate-400 font-bold mt-1">멀티 보드게임 플랫폼</p>
+        </div>
+
+        <div id="screen-auth" class="hidden space-y-4 my-auto">
+            <input type="email" id="email" placeholder="이메일" class="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-medium">
+            <input type="password" id="password" placeholder="비밀번호" class="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-medium">
+            <input type="text" id="nickname" placeholder="닉네임 (가입 시)" class="w-full p-4 bg-slate-50 border rounded-2xl outline-none font-bold">
+            <div class="flex gap-2 pt-2">
+                <button onclick="handleAuth('login')" class="flex-1 bg-slate-800 text-white py-4 rounded-2xl font-bold shadow-lg">로그인</button>
+                <button onclick="handleAuth('signup')" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-100">회원가입</button>
+            </div>
+        </div>
+
+        <div id="screen-dashboard" class="hidden flex-col h-full overflow-hidden">
+            <div class="flex justify-between items-center bg-indigo-50 p-4 rounded-2xl border border-indigo-100 mb-6 flex-shrink-0">
+                <span id="user-display" class="font-bold text-indigo-600"></span>
+                <button onclick="handleLogout()" class="text-xs text-slate-400 font-bold underline">로그아웃</button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto no-scrollbar space-y-6">
+                <div>
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">참여 중인 게임</h3>
+                    <div id="my-game-list" class="space-y-2"></div>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 border-t pt-4">게임 히스토리 (나간 방)</h3>
+                    <div id="my-history-list" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <div class="space-y-3 pt-4 border-t mt-2 flex-shrink-0">
+                <div class="flex gap-2">
+                    <select id="gameType" class="w-1/3 p-4 bg-slate-50 border rounded-2xl outline-none font-bold text-sm text-slate-600">
+                        <option value="mind">마음의 실타래</option>
+                        </select>
+                    <input type="text" id="roomName" placeholder="새 방 이름" class="flex-1 p-4 bg-slate-50 border rounded-2xl outline-none font-bold text-sm">
+                </div>
+                <button onclick="createRoom()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-100">새 게임 방 만들기</button>
+                
+                <div class="flex gap-2 pt-2 border-t mt-2">
+                    <input type="text" id="joinCode" placeholder="초대 코드 입력" class="w-2/3 p-4 bg-slate-50 border rounded-2xl outline-none uppercase font-bold text-sm">
+                    <button onclick="joinRoomByCode()" class="w-1/3 bg-slate-800 text-white py-4 rounded-2xl font-bold shadow-lg">입장</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="loading" class="hidden fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-[400]"><span class="text-indigo-600 font-black animate-pulse">LOADING...</span></div>
+
+    <script>
+        const supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+        let user = null;
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg; toast.classList.remove('opacity-0', '-translate-y-5');
+            setTimeout(() => toast.classList.add('opacity-0', '-translate-y-5'), 2500);
+        }
+        function showLoading(show) { document.getElementById('loading').classList.toggle('hidden', !show); }
+
+        window.onload = async () => {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                user = session.user;
+                document.getElementById('user-display').innerText = user.user_metadata.display_name;
+                await loadMyGames();
+                document.getElementById('screen-auth').classList.add('hidden');
+                document.getElementById('screen-dashboard').classList.remove('hidden');
+                document.getElementById('screen-dashboard').classList.add('flex');
+            } else {
+                document.getElementById('screen-auth').classList.remove('hidden');
+            }
+        };
+
+        async function handleAuth(type) {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const nickname = document.getElementById('nickname').value.trim();
+            showLoading(true);
+            if (type === 'signup') {
+                const { error } = await supabaseClient.auth.signUp({ email, password, options: { data: { display_name: nickname } } });
+                showLoading(false);
+                if (error) return showToast(error.message);
+                showToast("가입 완료! 로그인 해주세요.");
+            } else {
+                const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                showLoading(false);
+                if (error) return showToast("정보를 확인하세요.");
+                location.reload();
+            }
+        }
+        async function handleLogout() { await supabaseClient.auth.signOut(); location.reload(); }
+
+        const gameNames = { 'mind': '마음의 실타래' }; // 게임 이름 매핑
+
+        function createGameListItem(i, isActive) {
+            const gameTitle = gameNames[i.game_rooms.game_type] || i.game_rooms.game_type;
+            return `
+                <div onclick="goToGame('${i.game_rooms.game_type}', '${i.room_code}')" class="p-3 bg-white border border-slate-200 rounded-xl flex justify-between items-center cursor-pointer hover:border-indigo-500 shadow-sm transition-all group ${isActive ? '' : 'opacity-60'}">
+                    <div>
+                        <h4 class="font-bold text-slate-700 text-sm group-hover:text-indigo-600 flex items-center gap-1.5">
+                            ${i.game_rooms.room_name}
+                            ${!isActive ? '<span class="text-[8px] bg-slate-200 text-slate-500 px-1 py-0.5 rounded font-black">나감</span>' : ''}
+                        </h4>
+                        <p class="text-[9px] font-black text-slate-400 mt-0.5"><span class="bg-indigo-50 text-indigo-500 px-1 rounded mr-1">${gameTitle}</span> CODE: ${i.room_code}</p>
+                    </div>
+                    <span class="text-indigo-200 group-hover:text-indigo-600 font-black text-xs">${isActive ? '➔ 입장' : '↺ 재입장'}</span>
+                </div>
+            `;
+        }
+
+        async function loadMyGames() {
+            const { data } = await supabaseClient.from('game_players').select(`room_code, is_active, game_rooms ( room_name, game_type )`).eq('user_id', user.id);
+            const activeList = document.getElementById('my-game-list');
+            const historyList = document.getElementById('my-history-list');
+            
+            const validData = data ? data.filter(i => i.game_rooms !== null) : [];
+            const activeData = validData.filter(i => i.is_active !== false);
+            const historyData = validData.filter(i => i.is_active === false);
+
+            activeList.innerHTML = activeData.length ? activeData.map(i => createGameListItem(i, true)).join('') : `<p class="text-center py-4 text-xs text-slate-300 font-bold bg-slate-50 rounded-2xl">참여 중인 게임이 없습니다.</p>`;
+            historyList.innerHTML = historyData.length ? historyData.map(i => createGameListItem(i, false)).join('') : `<p class="text-center py-4 text-xs text-slate-300 font-bold bg-slate-50 rounded-2xl">히스토리가 없습니다.</p>`;
+        }
+
+        async function createRoom() {
+            const name = document.getElementById('roomName').value.trim();
+            const type = document.getElementById('gameType').value;
+            if(!name) return showToast("방 이름을 입력하세요.");
+            
+            showLoading(true);
+            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            // DB에 방 생성 시 game_type도 함께 저장
+            const { error } = await supabaseClient.from('game_rooms').insert([{ room_code: code, room_name: name, game_type: type }]);
+            showLoading(false);
+            
+            if(error) return showToast("방 생성 실패");
+            goToGame(type, code);
+        }
+
+        async function joinRoomByCode() {
+            const code = document.getElementById('joinCode').value.trim().toUpperCase();
+            if(!code) return;
+            
+            showLoading(true);
+            const { data: room } = await supabaseClient.from('game_rooms').select('game_type').eq('room_code', code).single();
+            showLoading(false);
+            
+            if(!room) return showToast("방을 찾을 수 없습니다.");
+            goToGame(room.game_type, code);
+        }
+
+        // 해당 게임의 HTML 파일로 코드를 달아서 이동
+        function goToGame(gameType, code) {
+            window.location.href = `${gameType}.html?code=${code}`;
+        }
+    </script>
+</body>
+</html>
