@@ -57,7 +57,7 @@
                     <ul class="list-disc pl-5 space-y-1">
                         <li>자기 턴에는 <b>최소 2장 이상</b>의 카드를 한 장씩 배치해야 턴을 종료할 수 있습니다.</li>
                         <li>덱이 다 떨어져서 보충을 못 받는 후반부에는 최소 1장만 내도 됩니다.</li>
-                        <li>우측의 <b>[보류] (STOP)</b> 버튼을 누르면 다른 플레이어들에게 해당 칸에 카드를 내지 말라고 신호를 줄 수 있습니다. 언제든 아무나 누를 수 있습니다.</li>
+                        <li>우측의 <b>[보류] (STOP)</b> 버튼을 누르면 다른 플레이어들에게 해당 칸에 카드를 내지 말라고 신호를 줄 수 있습니다.</li>
                     </ul>
                 </div>
                 <div>
@@ -110,8 +110,8 @@
                     <div class="w-[8%] md:w-[10%] cell-border flex justify-center items-center flex-shrink-0">#</div>
                     <div class="flex-1 cell-border px-1 flex justify-center items-center">더미 속성 (Rule)</div>
                     <div class="w-[22%] md:w-[20%] cell-border px-1 flex justify-center items-center text-[#333] font-bold">현재 값 (Top)</div>
-                    <div class="w-[20%] md:w-[20%] cell-border px-1 flex justify-center items-center">적용 (Action)</div>
-                    <div class="w-[15%] md:w-[15%] cell-border px-1 flex justify-center items-center">보류 (Stop)</div>
+                    <div class="w-[20%] md:w-[20%] cell-border px-1 flex justify-center items-center">적용(Action)</div>
+                    <div class="w-[15%] md:w-[15%] cell-border px-1 flex justify-center items-center">보류(Stop)</div>
                 </div>
                 
                 <div id="piles-container" class="flex-col w-full text-[11px] md:text-[13px]"></div>
@@ -145,7 +145,9 @@
             
             <div class="flex items-center gap-1.5 md:gap-2 pr-1 md:pr-2 py-1.5 flex-shrink-0">
                 <div id="deck-status" class="hidden px-3 text-[#5f6368] font-mono border-r border-[#ccc]">남은 데이터: 0</div>
+                
                 <button id="btn-start" onclick="startGame()" class="hidden bg-[#0f9d58] text-white border border-[#0b8043] px-3 md:px-4 py-1 hover:bg-[#0b8043] whitespace-nowrap">매크로 실행 (Start)</button>
+                <button id="btn-claim-first" onclick="claimFirstTurn()" class="hidden bg-[#f29900] text-white border border-[#c77e00] px-3 md:px-4 py-1 hover:bg-[#c77e00] transition-colors whitespace-nowrap font-bold">우선 권한 획득 (선 시작)</button>
                 <button id="btn-give-up" onclick="giveUp()" class="hidden bg-[#fce8e6] text-[#c5221f] border border-[#f2bdb9] px-3 py-1 hover:bg-[#fad2cf] whitespace-nowrap">프로세스 포기</button>
                 <button id="btn-end-turn" onclick="endTurn()" class="hidden bg-[#1a73e8] text-white border border-[#1557b0] px-3 md:px-4 py-1 hover:bg-[#1557b0] disabled:opacity-40 disabled:bg-[#f1f3f4] disabled:text-[#999] disabled:border-[#ccc] transition-colors whitespace-nowrap font-bold">턴 종료 (Commit)</button>
             </div>
@@ -161,6 +163,7 @@
         
         let localSelectedCard = null; 
         let isProcessingMove = false; 
+        let isTogglingStop = false; // 💡 안드로이드 고스트 클릭(더블터치) 방지 락
         let previousPiles = [1, 1, 100, 100];
 
         function showToast(msg) { const toast = document.getElementById('toast'); toast.innerText = msg; toast.classList.remove('opacity-0', 'translate-y-5'); setTimeout(() => toast.classList.add('opacity-0', 'translate-y-5'), 2000); }
@@ -252,10 +255,7 @@
             
             let gs = { piles: [1, 1, 100, 100], deck: [], turnIndex: 0, cardsPlayedThisTurn: 0, stops: [false, false, false, false] };
             if (state.roomData.status !== 'waiting') { 
-                try { 
-                    gs = JSON.parse(state.roomData.current_theme || "{}"); 
-                    if(!gs.stops) gs.stops = [false, false, false, false];
-                } catch(e) {} 
+                try { gs = JSON.parse(state.roomData.current_theme || "{}"); if(!gs.stops) gs.stops = [false, false, false, false]; } catch(e) {} 
             }
 
             const activePlayer = state.players[gs.turnIndex % Math.max(state.players.length, 1)];
@@ -275,6 +275,9 @@
                     displayMsg = "=RESULT(Status: 'GAME_OVER', Msg: '데이터 병합 실패')";
                     displayThemeEl.classList.add('text-[#ea4335]');
                 }
+            } else if (state.roomData.status === 'selecting_first') {
+                displayMsg = `=AWAITING_FIRST_PLAYER(Msg: "메모로 협의 후 선 플레이어가 '우선 권한 획득' 클릭")`;
+                displayThemeEl.classList.add('text-[#f29900]');
             } else if (state.roomData.status === 'playing') {
                 displayMsg = `=TURN(Active: "${activePlayer?.user_name}", Played_Cards: ${gs.cardsPlayedThisTurn})`;
                 if(isMyTurn) displayThemeEl.classList.add('bg-[#e8f0fe]', 'text-[#1a73e8]');
@@ -307,9 +310,6 @@
                     }
                 }
 
-                
-                                                
-                // 💡 수정된 부분: 누가 STOP을 눌렀는지 이름과 색상을 렌더링
                 const stopData = gs.stops && gs.stops[idx];
                 let stopHtml = stopData 
                     ? `<button onclick="toggleStop(${idx})" class="flex flex-col items-center justify-center text-[10px] md:text-[11px] bg-[#fce8e6] text-[#c5221f] px-1 py-0.5 font-black border border-[#f2bdb9] hover:bg-[#fad2cf] shadow-sm w-full mx-0.5 h-full overflow-hidden leading-tight">
@@ -318,7 +318,6 @@
                        </button>` 
                     : `<button onclick="toggleStop(${idx})" class="text-[9px] md:text-[10px] bg-white text-[#9aa0a6] px-1 py-1 font-bold border border-[#e2e3e3] hover:bg-[#f1f3f4] w-full mx-0.5 h-full">보류</button>`;
 
-                
                 pilesHTML += `
                 <div class="flex w-full row-hover h-10 md:h-12 border-b border-[#e2e3e3] last:border-0 box-border overflow-hidden bg-white">
                     <div class="w-[8%] md:w-[10%] cell-border bg-[#f8f9fa] fixed-cell text-[#5f6368] flex-shrink-0">${idx+1}</div>
@@ -350,9 +349,10 @@
             document.getElementById('hand-container').innerHTML = handHTML;
 
             document.getElementById('btn-start').classList.toggle('hidden', state.roomData.status !== 'waiting');
+            document.getElementById('btn-claim-first').classList.toggle('hidden', state.roomData.status !== 'selecting_first');
             document.getElementById('btn-give-up').classList.toggle('hidden', state.roomData.status !== 'playing');
             document.getElementById('btn-end-turn').classList.toggle('hidden', state.roomData.status !== 'playing');
-            document.getElementById('deck-status').classList.toggle('hidden', state.roomData.status !== 'playing');
+            document.getElementById('deck-status').classList.toggle('hidden', state.roomData.status !== 'playing' && state.roomData.status !== 'selecting_first');
             
             if (state.roomData.status === 'playing') {
                 document.getElementById('deck-status').innerText = `Deck: ${gs.deck.length}장`;
@@ -384,10 +384,23 @@
             }
 
             const gs = { piles: [1, 1, 100, 100], deck: deck, turnIndex: 0, cardsPlayedThisTurn: 0, stops: [false, false, false, false] };
-            await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs), status: 'playing' }).eq('room_code', state.roomCode);
+            await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs), status: 'selecting_first' }).eq('room_code', state.roomCode);
             
             localSelectedCard = null;
             showLoading(false); btnStart.disabled = false; await refreshGame();
+        }
+
+        async function claimFirstTurn() {
+            showLoading(true);
+            const { data: room } = await supabaseClient.from('game_rooms').select('status, current_theme').eq('room_code', state.roomCode).single();
+            if (room.status !== 'selecting_first') { showLoading(false); return showToast("이미 누군가 권한을 획득했습니다."); }
+
+            const myIndex = state.players.findIndex(p => p.user_id === state.user.id);
+            let gs = JSON.parse(room.current_theme || "{}");
+            gs.turnIndex = myIndex; 
+
+            await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs), status: 'playing' }).eq('room_code', state.roomCode);
+            showLoading(false);
         }
 
         function selectHandCard(val) {
@@ -416,7 +429,7 @@
             gs.cardsPlayedThisTurn += 1;
             
             if(!gs.stops) gs.stops = [false, false, false, false];
-            gs.stops[pileIdx] = false; 
+            gs.stops[pileIdx] = false; // 카드 적용 시 STOP 무조건 해제
 
             localSelectedCard = null;
 
@@ -439,37 +452,38 @@
             isProcessingMove = false;
         }
 
+        // 💡 픽스: 안드로이드 고스트 클릭 쿨타임(Debounce) 방어 로직 추가
         async function toggleStop(pileIdx) {
-            if (state.roomData.status !== 'playing') return;
+            if (state.roomData.status !== 'playing' || isTogglingStop) return;
+            isTogglingStop = true; 
             
             const { data: room } = await supabaseClient.from('game_rooms').select('current_theme').eq('room_code', state.roomCode).single();
-            if (!room) return;
+            if (!room) { isTogglingStop = false; return; }
 
             let gs = JSON.parse(room.current_theme || "{}");
             if(!gs.stops) gs.stops = [false, false, false, false];
             
-            // 💡 수정된 부분: 이미 스탑이면 해제, 아니면 누른 사람의 이름과 색상을 객체로 저장
             if (gs.stops[pileIdx]) {
                 gs.stops[pileIdx] = false;
             } else {
-                gs.stops[pileIdx] = { 
-                    name: state.myPlayerInfo.user_name, 
-                    color: state.myPlayerInfo.color 
-                };
+                gs.stops[pileIdx] = { name: state.myPlayerInfo.user_name, color: state.myPlayerInfo.color };
             }
             
             state.roomData.current_theme = JSON.stringify(gs);
-            renderUI(); // 즉시 화면에 반영
+            renderUI(); 
             
             await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs) }).eq('room_code', state.roomCode);
+            
+            // 0.5초 동안 연속 클릭(더블 터치 버그) 완전 무시
+            setTimeout(() => { isTogglingStop = false; }, 500); 
         }
-
 
         async function endTurn() {
             const btn = document.getElementById('btn-end-turn');
             btn.disabled = true;
             showLoading(true);
 
+            // 데이터 꼬임 방지를 위해 DB에서 강제로 최신 상태 다시 로딩
             const { data: room, error: fetchErr } = await supabaseClient.from('game_rooms').select('*').eq('room_code', state.roomCode).single();
             if (fetchErr || !room) { showLoading(false); btn.disabled = false; return showToast("데이터 동기화 오류"); }
 
@@ -482,9 +496,7 @@
 
             gs.cardsPlayedThisTurn = 0;
             gs.turnIndex += 1;
-            
-            // 💡 수정된 부분: 턴이 넘어가도 기존 STOP 상태를 지우지 않고 그대로 유지합니다!
-            if (!gs.stops) gs.stops = [false, false, false, false];
+            if (!gs.stops) gs.stops = [false, false, false, false]; // 기존 STOP 유지
 
             const { error: updateErr } = await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs) }).eq('room_code', state.roomCode);
             await supabaseClient.from('game_players').update({ board_state: JSON.stringify(myHand) }).eq('room_code', state.roomCode).eq('user_id', state.user.id);
@@ -492,7 +504,6 @@
             if (updateErr) { showToast("턴 진행 오류"); btn.disabled = false; }
             showLoading(false);
         }
-
 
         function giveUp() { openConfirmModal("더 이상 진행할 수 없습니까?\n게임이 즉시 패배로 종료됩니다.", async () => { showLoading(true); await supabaseClient.from('game_rooms').update({ status: 'revealed' }).eq('room_code', state.roomCode); showLoading(false); closeConfirmModal(); }); }
         function confirmRestartGame() { openConfirmModal("모든 데이터를 초기화하시겠습니까?\n(메모 로그 영구 삭제)", handleRestartGame); }
