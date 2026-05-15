@@ -18,7 +18,6 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* 엑셀 테두리 및 셀 높이 고정 클래스 */
         .cell-border { border-right: 1px solid #e2e3e3; }
         .fixed-cell { height: 100%; display: flex; align-items: center; justify-content: center; }
     </style>
@@ -88,7 +87,9 @@
                 <button id="btn-force-end" onclick="confirmForceEndGame()" class="hidden bg-[#fce8e6] text-[#c5221f] border border-[#f2bdb9] px-2.5 md:px-3 py-1 hover:bg-[#fad2cf] whitespace-nowrap">강제 병합</button>
                 <button id="btn-start" onclick="startGame()" class="hidden bg-[#0f9d58] text-white border border-[#0b8043] px-3 md:px-4 py-1 hover:bg-[#0b8043] disabled:opacity-50 whitespace-nowrap">매크로 실행</button>
                 <button id="btn-ready" onclick="toggleReady()" class="hidden bg-[#1a73e8] text-white border border-[#1557b0] px-3 md:px-4 py-1 hover:bg-[#1557b0] transition-colors disabled:opacity-50 whitespace-nowrap">데이터 커밋</button>
+                
                 <button id="btn-apply-all" onclick="applyAllAndNext()" class="hidden bg-[#f29900] text-white border border-[#b37400] px-3 md:px-4 py-1 hover:bg-[#c77e00] transition-colors disabled:opacity-50 whitespace-nowrap font-bold">일괄 적용 (Next)</button>
+                <div id="msg-waiting-host" class="hidden px-2 py-1 text-[#f29900] font-bold text-xs whitespace-nowrap">방장 병합 대기중...</div>
             </div>
         </div>
     </div>
@@ -104,6 +105,19 @@
         function showToast(msg) { const toast = document.getElementById('toast'); toast.innerText = msg; toast.classList.remove('opacity-0', 'translate-y-5'); setTimeout(() => toast.classList.add('opacity-0', 'translate-y-5'), 2000); }
         function showLoading(show) { document.getElementById('loading').classList.toggle('hidden', !show); }
         function goToLobby() { window.location.href = 'index.html'; }
+
+        // [데이터 증발 방지 픽스] DB에서 불러온 board_state를 무조건 배열로 안전하게 파싱합니다.
+        function parseBoard(raw) {
+            if (!raw) return Array(20).fill("");
+            if (Array.isArray(raw)) return raw;
+            if (typeof raw === 'string') {
+                try { 
+                    let parsed = JSON.parse(raw); 
+                    return Array.isArray(parsed) ? parsed : Array(20).fill("");
+                } catch(e) { return Array(20).fill(""); }
+            }
+            return Array(20).fill("");
+        }
 
         window.onload = async () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -135,7 +149,8 @@
 
         async function selectColor(color) {
             showLoading(true);
-            const { error } = await supabaseClient.from('game_players').insert([{ room_code: state.roomCode, user_id: state.user.id, user_name: state.user.user_metadata.display_name, color: color, is_active: true, board_state: JSON.stringify(Array(20).fill("")) }]);
+            const emptyBoard = Array(20).fill("");
+            const { error } = await supabaseClient.from('game_players').insert([{ room_code: state.roomCode, user_id: state.user.id, user_name: state.user.user_metadata.display_name, color: color, is_active: true, board_state: emptyBoard }]);
             showLoading(false);
             if(error) return showToast("오류 발생");
             document.getElementById('screen-color').classList.add('hidden'); document.getElementById('screen-color').classList.remove('flex');
@@ -176,7 +191,6 @@
             renderUI();
         }
 
-        // 스트림스 점수 계산 로직
         function calculateStreamsScore(values) {
             const scoreTable = {0:0, 1:0, 2:1, 3:3, 4:5, 5:7, 6:9, 7:11, 8:15, 9:20, 10:25, 11:30, 12:35, 13:40, 14:50, 15:60, 16:70, 17:85, 18:100, 19:150, 20:300};
             function getGroups(vals) {
@@ -238,12 +252,10 @@
             });
             document.getElementById('grid-header').innerHTML = headerHTML;
 
-            // 내 보드 파싱 및 미리보기(Preview) 반영
-            let myBoard = Array(20).fill("");
-            try { myBoard = JSON.parse(state.myPlayerInfo.board_state || "[]"); if(myBoard.length < 20) myBoard = Array(20).fill(""); } catch(e) {}
-            
+            // 내 보드 안전하게 파싱 (parseBoard)
+            let myBoard = parseBoard(state.myPlayerInfo.board_state);
             let myPreviewBoard = [...myBoard];
-            // 아직 커밋 안했으면 로컬 선택값 보여주고, 커밋 했으면 DB에 저장된 selected_slot 보여줌
+            
             if (localSelectedSlot && !state.myPlayerInfo.is_ready && state.roomData.status === 'playing') {
                 myPreviewBoard[localSelectedSlot - 1] = gameState.current;
             } else if (state.myPlayerInfo.is_ready && state.myPlayerInfo.selected_slot) {
@@ -253,26 +265,25 @@
             let otherBoards = {};
             state.players.forEach(p => {
                 if(p.user_id !== state.user.id) {
-                    try { otherBoards[p.user_id] = JSON.parse(p.board_state || "[]"); if(otherBoards[p.user_id].length<20) otherBoards[p.user_id] = Array(20).fill(""); } 
-                    catch(e) { otherBoards[p.user_id] = Array(20).fill(""); }
+                    otherBoards[p.user_id] = parseBoard(p.board_state);
                 }
             });
 
-            // 20개 슬롯 렌더링 (높이 h-8/h-9 로 엄격하게 고정)
+            // 20개 슬롯 렌더링 (높이 overflow-hidden 으로 고정 방어)
             let rowsHTML = "";
             for(let i=0; i<20; i++) {
                 let isMySelected = (localSelectedSlot === i+1) || (state.myPlayerInfo?.selected_slot === i+1);
                 let myVal = myPreviewBoard[i] || "";
                 let cellClass = isMySelected ? "bg-[#e8eaed] text-[#1a73e8] font-bold shadow-inner" : (myVal ? "font-bold text-[#333]" : "text-[#9aa0a6]");
 
-                let rowHTML = `<div class="flex w-full min-w-max row-hover h-8 md:h-9 border-b border-[#e2e3e3] last:border-0 box-border">
-                    <div class="w-8 md:w-10 cell-border bg-[#f8f9fa] fixed-cell text-[#5f6368]">${i+1}</div>
-                    <div class="w-24 md:w-32 cell-border fixed-cell cursor-pointer transition-colors ${cellClass}" onclick="selectSlot(${i+1})">${myVal}</div>`;
+                let rowHTML = `<div class="flex w-full min-w-max row-hover h-8 md:h-9 border-b border-[#e2e3e3] last:border-0 box-border overflow-hidden">
+                    <div class="w-8 md:w-10 cell-border bg-[#f8f9fa] fixed-cell text-[#5f6368] flex-shrink-0">${i+1}</div>
+                    <div class="w-24 md:w-32 cell-border fixed-cell cursor-pointer transition-colors ${cellClass} flex-shrink-0" onclick="selectSlot(${i+1})">${myVal}</div>`;
 
                 state.players.forEach(p => {
                     if(p.user_id !== state.user.id) {
                         let oVal = otherBoards[p.user_id][i] || "";
-                        rowHTML += `<div class="w-24 md:w-32 cell-border fixed-cell ${oVal ? 'font-bold text-[#333]' : ''}">${oVal}</div>`;
+                        rowHTML += `<div class="w-24 md:w-32 cell-border fixed-cell flex-shrink-0 ${oVal ? 'font-bold text-[#333]' : ''}">${oVal}</div>`;
                     }
                 });
                 rowHTML += `</div>`;
@@ -280,11 +291,11 @@
             }
 
             // 실시간 점수(∑) 렌더링 (하단 고정)
-            let scoreHTML = `<div class="flex w-full min-w-max bg-[#f8f9fa] sticky bottom-0 border-t-[3px] border-[#ccc] shadow-[0_-2px_5px_rgba(0,0,0,0.05)] h-8 md:h-9 box-border">
-                <div class="w-8 md:w-10 cell-border fixed-cell text-[#5f6368] font-bold text-sm">∑</div>
-                <div class="w-24 md:w-32 cell-border fixed-cell font-black text-[#1a73e8] text-sm">${calculateStreamsScore(myPreviewBoard)}</div>`;
+            let scoreHTML = `<div class="flex w-full min-w-max bg-[#f8f9fa] sticky bottom-0 border-t-[3px] border-[#ccc] shadow-[0_-2px_5px_rgba(0,0,0,0.05)] h-8 md:h-9 box-border overflow-hidden">
+                <div class="w-8 md:w-10 cell-border fixed-cell text-[#5f6368] font-bold text-sm flex-shrink-0">∑</div>
+                <div class="w-24 md:w-32 cell-border fixed-cell font-black text-[#1a73e8] text-sm flex-shrink-0">${calculateStreamsScore(myPreviewBoard)}</div>`;
             state.players.forEach(p => {
-                if(p.user_id !== state.user.id) scoreHTML += `<div class="w-24 md:w-32 cell-border fixed-cell font-bold text-[#333]">${calculateStreamsScore(otherBoards[p.user_id])}</div>`;
+                if(p.user_id !== state.user.id) scoreHTML += `<div class="w-24 md:w-32 cell-border fixed-cell font-bold text-[#333] flex-shrink-0">${calculateStreamsScore(otherBoards[p.user_id])}</div>`;
             });
             scoreHTML += `</div>`;
 
@@ -292,15 +303,22 @@
 
             // 게임 진행 여부 체킹
             const isAllReady = state.players.length > 0 && state.players.every(p => p.is_ready);
+            const isHost = state.players.length > 0 && state.players[0].user_id === state.user.id; // 첫 번째 입장자가 방장
 
             document.getElementById('btn-start').classList.toggle('hidden', state.roomData.status !== 'waiting');
+            
+            // 모든 사람이 커밋했으면, 커밋 버튼은 숨깁니다.
             document.getElementById('btn-ready').classList.toggle('hidden', state.roomData.status !== 'playing' || isAllReady);
-            document.getElementById('btn-apply-all').classList.toggle('hidden', state.roomData.status !== 'playing' || !isAllReady);
+            
+            // 일괄 적용 버튼은 방장에게만 보입니다.
+            document.getElementById('btn-apply-all').classList.toggle('hidden', state.roomData.status !== 'playing' || !isAllReady || !isHost);
+            document.getElementById('msg-waiting-host').classList.toggle('hidden', state.roomData.status !== 'playing' || !isAllReady || isHost);
+
             document.getElementById('btn-force-end').classList.toggle('hidden', state.roomData.status !== 'playing');
             
             const btnReady = document.getElementById('btn-ready');
             btnReady.innerText = state.myPlayerInfo?.is_ready ? "커밋 취소 (Undo)" : "데이터 커밋 (Commit)";
-            btnReady.disabled = (!localSelectedSlot && !state.myPlayerInfo.is_ready); // 자리 지정 안하면 비활성화
+            btnReady.disabled = (!localSelectedSlot && !state.myPlayerInfo.is_ready); 
             
             if(state.myPlayerInfo?.is_ready) {
                 btnReady.classList.replace('bg-[#1a73e8]', 'bg-[#f1f3f4]'); btnReady.classList.replace('text-white', 'text-[#333]'); btnReady.classList.replace('border-[#1557b0]', 'border-[#ccc]');
@@ -326,9 +344,9 @@
             const { error: roomError } = await supabaseClient.from('game_rooms').update({ current_theme: gameStateStr, status: 'playing' }).eq('room_code', state.roomCode);
             if (roomError) { showLoading(false); btnStart.disabled = false; return showToast("권한 부족"); }
             
-            const emptyBoardStr = JSON.stringify(Array(20).fill(""));
+            const emptyBoard = Array(20).fill("");
             for(let i=0; i < currentPlayers.length; i++) { 
-                await supabaseClient.from('game_players').update({ board_state: emptyBoardStr, is_ready: false, selected_slot: null }).eq('room_code', state.roomCode).eq('user_id', currentPlayers[i].user_id); 
+                await supabaseClient.from('game_players').update({ board_state: emptyBoard, is_ready: false, selected_slot: null }).eq('room_code', state.roomCode).eq('user_id', currentPlayers[i].user_id); 
             }
             localSelectedSlot = null;
             showLoading(false); btnStart.disabled = false; await refreshGame();
@@ -337,9 +355,9 @@
         function confirmRestartGame() { openConfirmModal("모든 데이터를 초기화하시겠습니까?\n(메모 로그 영구 삭제)", handleRestartGame); }
         async function handleRestartGame() {
             showLoading(true);
-            const emptyBoardStr = JSON.stringify(Array(20).fill(""));
+            const emptyBoard = Array(20).fill("");
             await supabaseClient.from('game_rooms').update({ status: 'waiting', current_theme: '' }).eq('room_code', state.roomCode);
-            await supabaseClient.from('game_players').update({ board_state: emptyBoardStr, is_ready: false, selected_slot: null }).eq('room_code', state.roomCode);
+            await supabaseClient.from('game_players').update({ board_state: emptyBoard, is_ready: false, selected_slot: null }).eq('room_code', state.roomCode);
             await supabaseClient.from('game_chat').delete().eq('room_code', state.roomCode);
             localSelectedSlot = null; document.getElementById('chat-messages').innerHTML = ''; showLoading(false); showToast("초기화 완료");
         }
@@ -348,10 +366,10 @@
 
         function selectSlot(n) { 
             if(state.roomData.status !== 'playing' || state.myPlayerInfo?.is_ready) return; 
-            let myBoard = JSON.parse(state.myPlayerInfo.board_state || "[]");
+            let myBoard = parseBoard(state.myPlayerInfo.board_state);
             if(myBoard[n-1] !== "") return showToast("이미 데이터가 존재합니다.");
             localSelectedSlot = n;
-            renderUI(); // 클릭 시 즉시 화면에 반영 (로컬 미리보기)
+            renderUI(); 
         }
         
         async function toggleReady() { 
@@ -362,22 +380,19 @@
                     document.getElementById('btn-ready').disabled = false;
                     return showToast("배치할 셀을 먼저 선택해주세요.");
                 }
-                // is_ready를 true로 만들면서 내 비밀 선택값(selected_slot)을 DB에 저장 (남의 화면에는 안보임)
                 await supabaseClient.from('game_players').update({ is_ready: true, selected_slot: localSelectedSlot }).eq('room_code', state.roomCode).eq('user_id', state.user.id); 
             } else {
-                // 커밋 취소
                 await supabaseClient.from('game_players').update({ is_ready: false, selected_slot: null }).eq('room_code', state.roomCode).eq('user_id', state.user.id); 
             }
         }
 
-        // 새롭게 추가된 [일괄 적용 (다음 라운드)] 로직 (동시 클릭 방지 적용)
+        // [신규] 방장 전용 일괄 적용 및 다음 라운드 진행 로직
         async function applyAllAndNext() {
             const btn = document.getElementById('btn-apply-all');
             if(btn.disabled) return;
             btn.disabled = true;
             showLoading(true);
 
-            // DB에서 최신 상태 다시 확인 (레이스 컨디션 방어)
             const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true);
             if (!players.every(p => p.is_ready)) {
                 showLoading(false); btn.disabled = false;
@@ -386,16 +401,16 @@
 
             let gameState = JSON.parse(state.roomData.current_theme || "{}");
             
-            // 모든 플레이어의 비밀 선택값(selected_slot)을 실제 보드(board_state)에 병합하고 준비 상태 해제
+            // 모든 플레이어의 숨겨진 선택 값을 진짜 보드판 데이터로 삽입
             for (let p of players) {
-                let board = JSON.parse(p.board_state || "[]");
+                let board = parseBoard(p.board_state);
                 if (p.selected_slot) { board[p.selected_slot - 1] = gameState.current; }
                 await supabaseClient.from('game_players').update({ 
-                    board_state: JSON.stringify(board), selected_slot: null, is_ready: false 
+                    board_state: board, selected_slot: null, is_ready: false 
                 }).eq('room_code', state.roomCode).eq('user_id', p.user_id);
             }
 
-            // 라운드 진행 및 다음 타일 뽑기
+            // 라운드 종료 처리
             if (gameState.round >= 20) {
                 await supabaseClient.from('game_rooms').update({ status: 'revealed' }).eq('room_code', state.roomCode);
             } else {
@@ -419,7 +434,6 @@
             box.appendChild(d); box.scrollTop = box.scrollHeight;
         }
 
-        // 모달 및 관리 도구
         function openMemberManage() { closeRoomManage(); const list = document.getElementById('member-manage-list'); list.innerHTML = state.players.map(p => `<div class="flex justify-between items-center py-2 border-b border-[#e2e3e3] last:border-0"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full" style="background-color: ${p.color}"></div><span class="text-[#333] font-medium">${p.user_name}</span></div>${p.user_id !== state.user.id ? `<button onclick="confirmKickMember('${p.user_id}', '${p.user_name}')" class="text-xs border border-[#ccc] px-2 py-1 hover:bg-[#f1f3f4]">제외</button>` : `<span class="text-xs text-[#9aa0a6]">관리자</span>`}</div>`).join(''); document.getElementById('modal-member-list').classList.remove('hidden'); }
         function closeMemberManage() { document.getElementById('modal-member-list').classList.add('hidden'); }
         function confirmKickMember(id, name) { openConfirmModal(`[${name}] 레코드를 제외하시겠습니까?\n프로세스가 재시작됩니다.`, () => handleKickMember(id)); }
@@ -428,7 +442,7 @@
         function openRoomManage() { document.getElementById('modal-room-manage').classList.remove('hidden'); }
         function closeRoomManage() { document.getElementById('modal-room-manage').classList.add('hidden'); }
         
-        // 공유 링크 생성 시 환경에 구애받지 않도록 폴더 경로를 완벽하게 유지하는 로직 추가
+        // 공유 링크: 현재 브라우저의 기본 도메인 및 파일명을 그대로 가져옵니다.
         async function handleShareRoom() { 
             const baseUrl = window.location.href.split('?')[0];
             const t = `[공유 워크스페이스]\n시트: ${state.roomData.room_name}\n엑세스 키: ${state.roomCode}\n접속: ${baseUrl}?code=${state.roomCode}`; 
