@@ -17,7 +17,6 @@
         .chat-bubble { border-radius: 0px; border-left: 3px solid #1a73e8; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
         .cell-border { border-right: 1px solid #e2e3e3; }
         .fixed-cell { height: 100%; display: flex; align-items: center; justify-content: center; }
     </style>
@@ -31,10 +30,48 @@
     <div id="modal-rename" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[220]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333]">시트 이름 변경</div><div class="p-4"><input type="text" id="renameInput" class="w-full p-2 border border-[#ccc] outline-none focus:border-[#1a73e8]"></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right flex justify-end gap-2"><button onclick="closeRenameModal()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">취소</button><button onclick="handleRenameRoom()" class="bg-[#1a73e8] text-white border border-[#1a73e8] px-4 py-1 hover:bg-[#1557b0]">적용</button></div></div></div>
     <div id="modal-confirm" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[230]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#fce8e6] border-b border-[#ccc] px-4 py-2 font-bold text-[#c5221f]">시스템 경고</div><div class="p-6"><p id="confirm-message" class="text-[#333] whitespace-pre-line"></p></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right flex justify-end gap-2"><button onclick="closeConfirmModal()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">취소</button><button id="btn-confirm-action" class="bg-[#c5221f] text-white border border-[#c5221f] px-4 py-1 hover:bg-[#a50e0e]">확인</button></div></div></div>
 
+    <div id="modal-help" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[250]">
+        <div class="bg-white border border-[#ccc] shadow-lg w-full max-w-lg p-0 text-sm flex flex-col max-h-[85vh]">
+            <div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333] flex justify-between items-center">
+                <span>도움말 : 스트림스(STREAMS) 사용자 가이드</span>
+                <button onclick="closeHelpModal()" class="text-[#999] hover:text-[#333] font-bold">X</button>
+            </div>
+            <div class="p-5 overflow-y-auto space-y-4 text-[#333] leading-relaxed text-xs md:text-sm">
+                <div>
+                    <h3 class="font-bold text-[#1a73e8] mb-1">1. 게임 목표</h3>
+                    <p>총 20번의 라운드 동안 무작위로 나오는 숫자를 20개의 칸에 배치하여, <b>숫자가 오름차순(점점 커지게)으로 가장 길게 연결되도록</b> 만드는 게임입니다.</p>
+                </div>
+                <div>
+                    <h3 class="font-bold text-[#1a73e8] mb-1">2. 게임 진행 (루틴)</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>매 라운드 <b>1~30 사이의 숫자</b> 또는 <b>조커(★)</b>가 상단 수식창(fx)에 나타납니다.</li>
+                        <li>해당 숫자를 배치할 위치(1~20행)를 클릭하여 미리보기로 배치합니다. (다른 사람에겐 보이지 않습니다.)</li>
+                        <li>위치가 확실하다면 우측 하단의 <b>[데이터 커밋]</b> 버튼을 누릅니다. (이름 옆에 ✓ 표시 됨)</li>
+                        <li>모든 인원이 커밋을 완료하면, 방장이 <b>[일괄 적용(Next)]</b> 버튼을 눌러 확정하고 다음 라운드로 넘어갑니다.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-[#1a73e8] mb-1">3. 점수 계산 (오름차순 연결)</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>숫자는 <b>점점 커지거나 같은 숫자일 때만</b> 하나로 연결된 것으로 봅니다. (길어질수록 획득 점수 폭증)</li>
+                        <li><span class="bg-[#f1f3f4] px-1">예시 성공: [1] [3] [5] [5] [14]</span> (5칸 연결 = 7점 획득)</li>
+                        <li><span class="bg-[#fce8e6] px-1">예시 끊김: [14] [4] [8]</span> (14에서 4로 작아졌으므로 연결 끊김)</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-[#0f9d58] mb-1">4. 조커(★)의 활용</h3>
+                    <p>조커(★)는 모든 숫자를 대신할 수 있는 만능 연결 고리입니다. 오름차순이 끊어질 위기에서 <b>다리 역할</b>을 완벽하게 수행합니다.</p>
+                </div>
+            </div>
+            <div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right">
+                <button onclick="closeHelpModal()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">닫기</button>
+            </div>
+        </div>
+    </div>
+
     <div id="screen-color" class="hidden flex-1 items-center justify-center bg-[#f8f9fa]"><div class="bg-white border border-[#ccc] shadow-sm p-6 w-full max-w-sm"><h2 class="text-sm font-bold text-[#333] mb-4 border-b pb-2">작업자 레이블 색상 할당</h2><div id="color-grid" class="grid grid-cols-5 gap-2 mb-4"></div><button onclick="goToLobby()" class="text-xs text-[#1a73e8] underline">세션 종료 (로비로)</button></div></div>
 
     <div id="screen-game" class="hidden flex-col h-full w-full">
-        
         <div class="bg-[#f8f9fa] border-b border-[#e2e3e3] px-2 md:px-4 py-2 flex items-center gap-2 md:gap-3 flex-shrink-0">
             <div class="w-7 h-7 md:w-8 md:h-8 bg-[#0f9d58] text-white flex items-center justify-center font-bold text-base md:text-lg cursor-pointer hover:opacity-90 flex-shrink-0" title="로비로 이동" onclick="goToLobby()">S</div>
             <div class="flex-1 overflow-hidden whitespace-nowrap">
@@ -43,8 +80,8 @@
                     <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer hidden md:inline">파일</span>
                     <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer hidden md:inline">수정</span>
                     <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer hidden md:inline">보기</span>
-                    <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer hidden md:inline">데이터</span>
                     <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer text-[#1a73e8]" onclick="openRoomManage()">도구(관리)</span>
+                    <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer font-bold text-[#0f9d58]" onclick="openHelpModal()">도움말(Help)</span>
                 </div>
             </div>
             <button onclick="handleShareRoom()" class="bg-[#e8f0fe] text-[#1a73e8] px-3 md:px-4 py-1.5 text-[10px] md:text-[11px] font-bold border border-[#d2e3fc] hover:bg-[#d2e3fc] whitespace-nowrap flex-shrink-0">공유</button>
@@ -56,16 +93,13 @@
         </div>
 
         <div class="flex-1 flex flex-col md:flex-row overflow-hidden bg-white">
-            
             <div class="flex-1 flex flex-col md:border-r border-[#e2e3e3] overflow-x-auto overflow-y-auto bg-white relative">
                 <div id="grid-header" class="flex bg-[#f8f9fa] border-b border-[#e2e3e3] text-[10px] md:text-[11px] text-[#5f6368] font-medium sticky top-0 z-20 min-w-max h-8 md:h-9"></div>
                 <div id="card-slots" class="flex-col w-full text-[11px] md:text-[12px] min-w-max"></div>
             </div>
 
             <div class="h-1/3 md:h-full w-full md:w-72 bg-white flex flex-col flex-shrink-0 border-t md:border-t-0 border-[#e2e3e3]">
-                <div class="p-1.5 md:p-2 border-b border-[#e2e3e3] bg-[#f8f9fa] text-[10px] md:text-[11px] text-[#5f6368] font-medium">
-                    <span>메모 이력 (Log)</span>
-                </div>
+                <div class="p-1.5 md:p-2 border-b border-[#e2e3e3] bg-[#f8f9fa] text-[10px] md:text-[11px] text-[#5f6368] font-medium"><span>메모 이력 (Log)</span></div>
                 <div id="chat-messages" class="flex-1 overflow-y-auto p-2 md:p-3 space-y-2 bg-white text-[10px] md:text-[11px]"></div>
                 <div class="p-1.5 md:p-2 border-t border-[#e2e3e3] bg-[#f8f9fa]">
                     <form onsubmit="handleChatSubmit(event)" class="flex gap-1.5 md:gap-2 m-0">
@@ -87,7 +121,6 @@
                 <button id="btn-force-end" onclick="confirmForceEndGame()" class="hidden bg-[#fce8e6] text-[#c5221f] border border-[#f2bdb9] px-2.5 md:px-3 py-1 hover:bg-[#fad2cf] whitespace-nowrap">강제 병합</button>
                 <button id="btn-start" onclick="startGame()" class="hidden bg-[#0f9d58] text-white border border-[#0b8043] px-3 md:px-4 py-1 hover:bg-[#0b8043] disabled:opacity-50 whitespace-nowrap">매크로 실행</button>
                 <button id="btn-ready" onclick="toggleReady()" class="hidden bg-[#1a73e8] text-white border border-[#1557b0] px-3 md:px-4 py-1 hover:bg-[#1557b0] transition-colors disabled:opacity-50 whitespace-nowrap">데이터 커밋</button>
-                
                 <button id="btn-apply-all" onclick="applyAllAndNext()" class="hidden bg-[#f29900] text-white border border-[#b37400] px-3 md:px-4 py-1 hover:bg-[#c77e00] transition-colors disabled:opacity-50 whitespace-nowrap font-bold">일괄 적용 (Next)</button>
                 <div id="msg-waiting-host" class="hidden px-2 py-1 text-[#f29900] font-bold text-xs whitespace-nowrap">방장 병합 대기중...</div>
             </div>
@@ -106,15 +139,15 @@
         function showLoading(show) { document.getElementById('loading').classList.toggle('hidden', !show); }
         function goToLobby() { window.location.href = 'index.html'; }
 
-        // [데이터 증발 방지 픽스] DB에서 불러온 board_state를 무조건 배열로 안전하게 파싱합니다.
+        // 도움말 모달 제어 함수
+        function openHelpModal() { document.getElementById('modal-help').classList.remove('hidden'); }
+        function closeHelpModal() { document.getElementById('modal-help').classList.add('hidden'); }
+
         function parseBoard(raw) {
             if (!raw) return Array(20).fill("");
             if (Array.isArray(raw)) return raw;
             if (typeof raw === 'string') {
-                try { 
-                    let parsed = JSON.parse(raw); 
-                    return Array.isArray(parsed) ? parsed : Array(20).fill("");
-                } catch(e) { return Array(20).fill(""); }
+                try { let parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed : Array(20).fill(""); } catch(e) { return Array(20).fill(""); }
             }
             return Array(20).fill("");
         }
@@ -183,11 +216,7 @@
 
             state.roomData = room; state.players = players; state.myPlayerInfo = me;
 
-            // 라운드가 넘어가서 DB의 내 selected_slot이 초기화되었으면 로컬 변수도 초기화
-            if (state.myPlayerInfo.selected_slot === null) {
-                localSelectedSlot = null;
-            }
-
+            if (state.myPlayerInfo.selected_slot === null) { localSelectedSlot = null; }
             renderUI();
         }
 
@@ -240,7 +269,6 @@
                 `=STREAMS_PULL(Round: ${gameState.round}/20, Value: "${gameState.current}")` : 
                 (state.roomData.status === 'revealed' ? "=STREAMS_EVAL(Status: 'GAME_OVER')" : "#WAITING_FOR_MACRO");
 
-            // 동적 헤더 생성 (커밋 여부 볼드체 및 (✓) 표시 적용)
             let headerHTML = `<div class="w-8 md:w-10 cell-border flex justify-center items-center flex-shrink-0">#</div>
                               <div class="w-24 md:w-32 cell-border flex justify-center items-center text-[#1a73e8] font-bold">내 데이터(Me)</div>`;
             state.players.forEach(p => {
@@ -252,7 +280,6 @@
             });
             document.getElementById('grid-header').innerHTML = headerHTML;
 
-            // 내 보드 안전하게 파싱 (parseBoard)
             let myBoard = parseBoard(state.myPlayerInfo.board_state);
             let myPreviewBoard = [...myBoard];
             
@@ -264,12 +291,9 @@
 
             let otherBoards = {};
             state.players.forEach(p => {
-                if(p.user_id !== state.user.id) {
-                    otherBoards[p.user_id] = parseBoard(p.board_state);
-                }
+                if(p.user_id !== state.user.id) { otherBoards[p.user_id] = parseBoard(p.board_state); }
             });
 
-            // 20개 슬롯 렌더링 (높이 overflow-hidden 으로 고정 방어)
             let rowsHTML = "";
             for(let i=0; i<20; i++) {
                 let isMySelected = (localSelectedSlot === i+1) || (state.myPlayerInfo?.selected_slot === i+1);
@@ -290,7 +314,6 @@
                 rowsHTML += rowHTML;
             }
 
-            // 실시간 점수(∑) 렌더링 (하단 고정)
             let scoreHTML = `<div class="flex w-full min-w-max bg-[#f8f9fa] sticky bottom-0 border-t-[3px] border-[#ccc] shadow-[0_-2px_5px_rgba(0,0,0,0.05)] h-8 md:h-9 box-border overflow-hidden">
                 <div class="w-8 md:w-10 cell-border fixed-cell text-[#5f6368] font-bold text-sm flex-shrink-0">∑</div>
                 <div class="w-24 md:w-32 cell-border fixed-cell font-black text-[#1a73e8] text-sm flex-shrink-0">${calculateStreamsScore(myPreviewBoard)}</div>`;
@@ -301,19 +324,13 @@
 
             document.getElementById('card-slots').innerHTML = rowsHTML + scoreHTML;
 
-            // 게임 진행 여부 체킹
             const isAllReady = state.players.length > 0 && state.players.every(p => p.is_ready);
-            const isHost = state.players.length > 0 && state.players[0].user_id === state.user.id; // 첫 번째 입장자가 방장
+            const isHost = state.players.length > 0 && state.players[0].user_id === state.user.id;
 
             document.getElementById('btn-start').classList.toggle('hidden', state.roomData.status !== 'waiting');
-            
-            // 모든 사람이 커밋했으면, 커밋 버튼은 숨깁니다.
             document.getElementById('btn-ready').classList.toggle('hidden', state.roomData.status !== 'playing' || isAllReady);
-            
-            // 일괄 적용 버튼은 방장에게만 보입니다.
             document.getElementById('btn-apply-all').classList.toggle('hidden', state.roomData.status !== 'playing' || !isAllReady || !isHost);
             document.getElementById('msg-waiting-host').classList.toggle('hidden', state.roomData.status !== 'playing' || !isAllReady || isHost);
-
             document.getElementById('btn-force-end').classList.toggle('hidden', state.roomData.status !== 'playing');
             
             const btnReady = document.getElementById('btn-ready');
@@ -374,49 +391,34 @@
         
         async function toggleReady() { 
             document.getElementById('btn-ready').disabled = true; 
-            
             if (!state.myPlayerInfo.is_ready) {
-                if(!localSelectedSlot) {
-                    document.getElementById('btn-ready').disabled = false;
-                    return showToast("배치할 셀을 먼저 선택해주세요.");
-                }
+                if(!localSelectedSlot) { document.getElementById('btn-ready').disabled = false; return showToast("배치할 셀을 먼저 선택해주세요."); }
                 await supabaseClient.from('game_players').update({ is_ready: true, selected_slot: localSelectedSlot }).eq('room_code', state.roomCode).eq('user_id', state.user.id); 
             } else {
                 await supabaseClient.from('game_players').update({ is_ready: false, selected_slot: null }).eq('room_code', state.roomCode).eq('user_id', state.user.id); 
             }
         }
 
-        // [신규] 방장 전용 일괄 적용 및 다음 라운드 진행 로직
         async function applyAllAndNext() {
             const btn = document.getElementById('btn-apply-all');
             if(btn.disabled) return;
-            btn.disabled = true;
-            showLoading(true);
+            btn.disabled = true; showLoading(true);
 
             const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true);
-            if (!players.every(p => p.is_ready)) {
-                showLoading(false); btn.disabled = false;
-                return showToast("아직 커밋하지 않은 작업자가 있습니다.");
-            }
+            if (!players.every(p => p.is_ready)) { showLoading(false); btn.disabled = false; return showToast("아직 커밋하지 않은 작업자가 있습니다."); }
 
             let gameState = JSON.parse(state.roomData.current_theme || "{}");
-            
-            // 모든 플레이어의 숨겨진 선택 값을 진짜 보드판 데이터로 삽입
             for (let p of players) {
                 let board = parseBoard(p.board_state);
                 if (p.selected_slot) { board[p.selected_slot - 1] = gameState.current; }
-                await supabaseClient.from('game_players').update({ 
-                    board_state: board, selected_slot: null, is_ready: false 
-                }).eq('room_code', state.roomCode).eq('user_id', p.user_id);
+                await supabaseClient.from('game_players').update({ board_state: board, selected_slot: null, is_ready: false }).eq('room_code', state.roomCode).eq('user_id', p.user_id);
             }
 
-            // 라운드 종료 처리
             if (gameState.round >= 20) {
                 await supabaseClient.from('game_rooms').update({ status: 'revealed' }).eq('room_code', state.roomCode);
             } else {
                 const nextTile = gameState.pool.splice(Math.floor(Math.random() * gameState.pool.length), 1)[0];
-                gameState.round += 1;
-                gameState.current = nextTile;
+                gameState.round += 1; gameState.current = nextTile;
                 await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gameState) }).eq('room_code', state.roomCode);
             }
             showLoading(false);
@@ -442,7 +444,6 @@
         function openRoomManage() { document.getElementById('modal-room-manage').classList.remove('hidden'); }
         function closeRoomManage() { document.getElementById('modal-room-manage').classList.add('hidden'); }
         
-        // 공유 링크: 현재 브라우저의 기본 도메인 및 파일명을 그대로 가져옵니다.
         async function handleShareRoom() { 
             const baseUrl = window.location.href.split('?')[0];
             const t = `[공유 워크스페이스]\n시트: ${state.roomData.room_name}\n엑세스 키: ${state.roomCode}\n접속: ${baseUrl}?code=${state.roomCode}`; 
