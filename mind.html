@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Q3_Data_Analysis_v2.xlsx</title> <script src="https://cdn.tailwindcss.com"></script>
+    <title>Q3_Data_Analysis_v2.xlsx</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     <style>
-        /* 엑셀 특유의 딱딱한 테이블 테두리와 스크롤바 스타일 */
         body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background-color: #ffffff; }
         .cell-border { border-right: 1px solid #e2e3e3; border-bottom: 1px solid #e2e3e3; }
         .row-hover:hover { background-color: #f1f3f4; }
@@ -15,14 +15,16 @@
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 0px; }
         ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-        .chat-bubble { border-radius: 0px; border-left: 3px solid #1a73e8; } /* 메모장 스타일 */
+        .chat-bubble { border-radius: 0px; border-left: 3px solid #1a73e8; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="text-[#333333] h-screen w-screen overflow-hidden flex flex-col">
+<body class="text-[#333333] h-screen w-screen overflow-hidden flex flex-col bg-[#f8f9fa]">
 
-    <div id="toast" class="fixed bottom-10 right-10 bg-[#323232] text-white px-4 py-2 opacity-0 transition-all z-[300] pointer-events-none text-xs w-max text-left shadow-md">시스템 알림</div>
+    <div id="toast" class="fixed bottom-12 right-6 bg-[#323232] text-white px-4 py-2 opacity-0 transition-all z-[300] pointer-events-none text-xs w-max text-left shadow-md">시스템 알림</div>
 
-    <div id="modal-room-manage" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[200]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333]">도구 (방 관리)</div><div class="p-4 flex flex-col gap-2"><button onclick="openMemberManage()" class="border border-[#ccc] py-1 px-3 hover:bg-[#f1f3f4] text-left">참여자 권한 관리</button><button onclick="handleShareRoom()" class="border border-[#ccc] py-1 px-3 hover:bg-[#f1f3f4] text-left">공유 링크 복사</button><button onclick="openRenameModal()" class="border border-[#ccc] py-1 px-3 hover:bg-[#f1f3f4] text-left">시트 이름 변경</button><div class="border-t border-[#ccc] mt-2 pt-2"><button onclick="confirmDeleteRoom()" class="border border-[#ccc] bg-[#fce8e6] text-[#c5221f] py-1 px-3 hover:bg-[#fad2cf] w-full text-left">데이터 영구 삭제 (폭파)</button></div></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right"><button onclick="closeRoomManage()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">닫기</button></div></div></div>
+    <div id="modal-room-manage" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[200]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333]">도구 (관리)</div><div class="p-4 flex flex-col gap-2"><button onclick="openMemberManage()" class="border border-[#ccc] py-1.5 px-3 hover:bg-[#f1f3f4] text-left">참여자 권한 관리</button><button onclick="handleShareRoom()" class="border border-[#ccc] py-1.5 px-3 hover:bg-[#f1f3f4] text-left">공유 링크 복사</button><button onclick="openRenameModal()" class="border border-[#ccc] py-1.5 px-3 hover:bg-[#f1f3f4] text-left">시트 이름 변경</button><div class="border-t border-[#ccc] mt-2 pt-2"><button onclick="confirmDeleteRoom()" class="border border-[#ccc] bg-[#fce8e6] text-[#c5221f] py-1.5 px-3 hover:bg-[#fad2cf] w-full text-left">데이터 영구 삭제 (폭파)</button></div></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right"><button onclick="closeRoomManage()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">닫기</button></div></div></div>
     <div id="modal-member-list" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[210]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333]">참여자 권한 관리</div><div id="member-manage-list" class="p-4 max-h-60 overflow-y-auto space-y-1"></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right"><button onclick="closeMemberManage()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">닫기</button></div></div></div>
     <div id="modal-rename" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[220]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333]">시트 이름 변경</div><div class="p-4"><input type="text" id="renameInput" class="w-full p-2 border border-[#ccc] outline-none focus:border-[#1a73e8]"></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right flex justify-end gap-2"><button onclick="closeRenameModal()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">취소</button><button onclick="handleRenameRoom()" class="bg-[#1a73e8] text-white border border-[#1a73e8] px-4 py-1 hover:bg-[#1557b0]">적용</button></div></div></div>
     <div id="modal-confirm" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[230]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#fce8e6] border-b border-[#ccc] px-4 py-2 font-bold text-[#c5221f]">시스템 경고</div><div class="p-6"><p id="confirm-message" class="text-[#333] whitespace-pre-line"></p></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right flex justify-end gap-2"><button onclick="closeConfirmModal()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">취소</button><button id="btn-confirm-action" class="bg-[#c5221f] text-white border border-[#c5221f] px-4 py-1 hover:bg-[#a50e0e]">확인</button></div></div></div>
@@ -31,74 +33,73 @@
 
     <div id="screen-game" class="hidden flex-col h-full w-full">
         
-        <div class="bg-[#f8f9fa] border-b border-[#e2e3e3] px-4 py-2 flex items-center gap-3 flex-shrink-0">
-            <div class="w-8 h-8 bg-[#0f9d58] text-white flex items-center justify-center font-bold text-lg cursor-pointer hover:opacity-90" title="로비로 이동" onclick="goToLobby()">S</div>
-            <div class="flex-1">
-                <div class="text-sm text-[#333] font-medium" id="room-info-display">Loading...</div>
-                <div class="text-[11px] text-[#5f6368] flex gap-4 mt-1">
-                    <span class="hover:bg-[#e8eaed] px-1.5 py-0.5 rounded cursor-pointer">파일</span>
-                    <span class="hover:bg-[#e8eaed] px-1.5 py-0.5 rounded cursor-pointer">수정</span>
-                    <span class="hover:bg-[#e8eaed] px-1.5 py-0.5 rounded cursor-pointer">보기</span>
-                    <span class="hover:bg-[#e8eaed] px-1.5 py-0.5 rounded cursor-pointer">데이터</span>
-                    <span class="hover:bg-[#e8eaed] px-1.5 py-0.5 rounded cursor-pointer text-[#1a73e8]" onclick="openRoomManage()">도구(관리)</span>
+        <div class="bg-[#f8f9fa] border-b border-[#e2e3e3] px-2 md:px-4 py-2 flex items-center gap-2 md:gap-3 flex-shrink-0">
+            <div class="w-7 h-7 md:w-8 md:h-8 bg-[#0f9d58] text-white flex items-center justify-center font-bold text-base md:text-lg cursor-pointer hover:opacity-90 flex-shrink-0" title="로비로 이동" onclick="goToLobby()">S</div>
+            <div class="flex-1 overflow-hidden whitespace-nowrap">
+                <div class="text-xs md:text-sm text-[#333] font-medium truncate" id="room-info-display">Loading...</div>
+                <div class="text-[10px] md:text-[11px] text-[#5f6368] flex gap-2 md:gap-4 mt-0.5 md:mt-1">
+                    <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer hidden md:inline">파일</span>
+                    <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer hidden md:inline">수정</span>
+                    <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer hidden md:inline">보기</span>
+                    <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer hidden md:inline">데이터</span>
+                    <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer text-[#1a73e8]" onclick="openRoomManage()">도구(관리)</span>
                 </div>
             </div>
             <div class="hidden md:flex items-center gap-2 border-r border-[#ccc] pr-4 mr-2">
                 <div id="player-list" class="flex gap-1"></div>
             </div>
-            <button onclick="handleShareRoom()" class="bg-[#e8f0fe] text-[#1a73e8] px-4 py-1.5 text-[11px] font-bold border border-[#d2e3fc] hover:bg-[#d2e3fc]">공유</button>
+            <button onclick="handleShareRoom()" class="bg-[#e8f0fe] text-[#1a73e8] px-3 md:px-4 py-1.5 text-[10px] md:text-[11px] font-bold border border-[#d2e3fc] hover:bg-[#d2e3fc] whitespace-nowrap flex-shrink-0">공유</button>
         </div>
 
-        <div class="flex items-center border-b border-[#e2e3e3] bg-white flex-shrink-0 text-sm">
-            <div class="w-10 flex justify-center items-center text-[#5f6368] font-serif italic border-r border-[#e2e3e3] py-1 bg-[#f8f9fa]">fx</div>
-            <div id="display-theme" class="flex-1 px-3 py-1 text-[#333] font-mono outline-none">데이터 로딩 중...</div>
+        <div class="flex items-center border-b border-[#e2e3e3] bg-white flex-shrink-0 text-xs md:text-sm">
+            <div class="w-8 md:w-10 flex justify-center items-center text-[#5f6368] font-serif italic border-r border-[#e2e3e3] py-1 bg-[#f8f9fa] flex-shrink-0">fx</div>
+            <div id="display-theme" class="flex-1 px-3 py-1 text-[#333] font-mono outline-none truncate">데이터 로딩 중...</div>
         </div>
 
-        <div class="flex-1 flex overflow-hidden bg-white">
+        <div class="flex-1 flex flex-col md:flex-row overflow-hidden bg-white">
             
-            <div class="flex-1 flex flex-col border-r border-[#e2e3e3] overflow-y-auto bg-white">
-                <div class="flex bg-[#f8f9fa] border-b border-[#e2e3e3] text-[11px] text-[#5f6368] font-medium sticky top-0 z-10">
-                    <div class="w-10 cell-border flex justify-center py-1">#</div>
+            <div class="flex-1 flex flex-col md:border-r border-[#e2e3e3] overflow-y-auto bg-white">
+                <div class="flex bg-[#f8f9fa] border-b border-[#e2e3e3] text-[10px] md:text-[11px] text-[#5f6368] font-medium sticky top-0 z-10">
+                    <div class="w-8 md:w-10 cell-border flex justify-center py-1 flex-shrink-0">#</div>
                     <div class="flex-1 cell-border px-2 py-1">입력 데이터 (Value)</div>
-                    <div class="w-32 cell-border px-2 py-1">작업자 (Author)</div>
-                    <div class="w-16 cell-border px-2 py-1 text-center">상태 (St)</div>
+                    <div class="w-24 md:w-32 cell-border px-2 py-1">작업자 (Author)</div>
+                    <div class="w-12 md:w-16 cell-border px-2 py-1 text-center">상태</div>
                 </div>
-                <div id="card-slots" class="flex-col w-full text-[12px]"></div>
+                <div id="card-slots" class="flex-col w-full text-[11px] md:text-[12px]"></div>
             </div>
 
-            <div class="w-72 bg-white flex flex-col flex-shrink-0 hidden md:flex">
-                <div class="p-2 border-b border-[#e2e3e3] bg-[#f8f9fa] text-[11px] text-[#5f6368] font-medium flex justify-between items-center">
+            <div class="h-1/3 md:h-full w-full md:w-72 bg-white flex flex-col flex-shrink-0 border-t md:border-t-0 border-[#e2e3e3]">
+                <div class="p-1.5 md:p-2 border-b border-[#e2e3e3] bg-[#f8f9fa] text-[10px] md:text-[11px] text-[#5f6368] font-medium">
                     <span>메모 이력 (Log)</span>
                 </div>
-                <div id="chat-messages" class="flex-1 overflow-y-auto p-3 space-y-3 bg-white text-[11px]"></div>
-                <div class="p-2 border-t border-[#e2e3e3] bg-[#f8f9fa]">
-                    <form onsubmit="handleChatSubmit(event)" class="flex gap-2 m-0">
-                        <input type="text" id="chat-input" placeholder="메모 추가..." autocomplete="off" class="flex-1 px-2 py-1.5 bg-white border border-[#ccc] outline-none focus:border-[#1a73e8] text-[11px]">
-                        <button type="submit" class="bg-[#f1f3f4] text-[#333] border border-[#ccc] px-3 py-1 text-[11px] hover:bg-[#e8eaed]">작성</button>
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-2 md:p-3 space-y-2 bg-white text-[10px] md:text-[11px]"></div>
+                <div class="p-1.5 md:p-2 border-t border-[#e2e3e3] bg-[#f8f9fa]">
+                    <form onsubmit="handleChatSubmit(event)" class="flex gap-1.5 md:gap-2 m-0">
+                        <input type="text" id="chat-input" placeholder="메모 추가..." autocomplete="off" class="flex-1 px-2 py-1 bg-white border border-[#ccc] outline-none focus:border-[#1a73e8] text-[10px] md:text-[11px]">
+                        <button type="submit" class="bg-[#f1f3f4] text-[#333] border border-[#ccc] px-2 md:px-3 py-1 text-[10px] md:text-[11px] hover:bg-[#e8eaed] whitespace-nowrap">입력</button>
                     </form>
                 </div>
             </div>
         </div>
 
-        <div class="bg-[#f8f9fa] border-t border-[#e2e3e3] flex items-center justify-between px-2 flex-shrink-0 text-[11px]">
-            <div class="flex items-center">
-                <div class="px-2 py-1 text-[#5f6368] border-r border-[#e2e3e3] font-bold cursor-pointer hover:bg-[#e8eaed]" title="로비로 나가기" onclick="goToLobby()">◀</div>
-                <div class="bg-white text-[#1a73e8] font-bold px-4 py-1.5 border-r border-t border-l border-[#e2e3e3] shadow-[0_-1px_0_#1a73e8] cursor-pointer">마음의_실타래_DB</div>
-                <div class="text-[#5f6368] px-4 py-1.5 hover:bg-[#e8eaed] cursor-pointer" onclick="confirmRestartGame()">초기화_Sheet</div>
+        <div class="bg-[#f8f9fa] border-t border-[#e2e3e3] flex items-center justify-between px-2 flex-shrink-0 text-[10px] md:text-[11px] overflow-x-auto no-scrollbar">
+            <div class="flex items-center flex-shrink-0">
+                <div class="px-2 py-1.5 text-[#5f6368] border-r border-[#e2e3e3] font-bold cursor-pointer hover:bg-[#e8eaed]" title="로비로 나가기" onclick="goToLobby()">◀</div>
+                <div class="bg-white text-[#1a73e8] font-bold px-3 md:px-4 py-1.5 border-r border-t border-l border-[#e2e3e3] shadow-[0_-1px_0_#1a73e8] cursor-pointer whitespace-nowrap">Sheet1</div>
+                <div class="text-[#5f6368] px-3 md:px-4 py-1.5 hover:bg-[#e8eaed] cursor-pointer whitespace-nowrap" onclick="confirmRestartGame()">초기화</div>
             </div>
             
-            <div class="flex items-center gap-2 pr-2 py-1">
-                
-                <div id="my-secret-area" onpointerdown="showSecret()" onpointerup="hideSecretDelay()" onpointerleave="hideSecret()" oncontextmenu="event.preventDefault();" style="touch-action: none; -webkit-user-select: none; user-select: none;" class="flex items-center bg-white border border-[#ccc] px-2 py-1 cursor-pointer">
-                    <span class="text-[#5f6368] mr-2">Personal Key:</span>
-                    <span id="secret-cover" class="bg-[#e8eaed] text-[#5f6368] px-3">클릭 시 표시</span>
-                    <span id="my-number" class="hidden text-[#1a73e8] font-bold font-mono px-3">?</span>
+            <div class="flex items-center gap-1.5 md:gap-2 pr-1 md:pr-2 py-1.5 flex-shrink-0">
+                <div id="my-secret-area" onpointerdown="showSecret()" onpointerup="hideSecretDelay()" onpointerleave="hideSecret()" oncontextmenu="event.preventDefault();" style="touch-action: none; -webkit-user-select: none; user-select: none;" class="flex items-center bg-white border border-[#ccc] px-2 py-0.5 cursor-pointer whitespace-nowrap">
+                    <span class="text-[#5f6368] mr-1 md:mr-2">Key:</span>
+                    <span id="secret-cover" class="bg-[#e8eaed] text-[#5f6368] px-2 py-0.5">조회</span>
+                    <span id="my-number" class="hidden text-[#1a73e8] font-bold font-mono px-2 py-0.5">?</span>
                 </div>
 
-                <button id="btn-force-end" onclick="confirmForceEndGame()" class="hidden bg-[#fce8e6] text-[#c5221f] border border-[#f2bdb9] px-3 py-1 hover:bg-[#fad2cf]">강제 병합</button>
-                <button id="btn-start" onclick="startGame()" class="hidden bg-[#0f9d58] text-white border border-[#0b8043] px-4 py-1 hover:bg-[#0b8043] disabled:opacity-50">매크로 실행 (게임시작)</button>
-                <button id="btn-ready" onclick="toggleReady()" class="hidden bg-[#1a73e8] text-white border border-[#1557b0] px-4 py-1 hover:bg-[#1557b0] transition-colors disabled:opacity-50">데이터 커밋 (확정)</button>
-                <button id="btn-next" onclick="nextRound()" class="hidden bg-[#f1f3f4] text-[#333] border border-[#ccc] px-4 py-1 hover:bg-[#e8eaed] disabled:opacity-50">다음 레코드 (라운드)</button>
+                <button id="btn-force-end" onclick="confirmForceEndGame()" class="hidden bg-[#fce8e6] text-[#c5221f] border border-[#f2bdb9] px-2.5 md:px-3 py-1 hover:bg-[#fad2cf] whitespace-nowrap">강제 병합</button>
+                <button id="btn-start" onclick="startGame()" class="hidden bg-[#0f9d58] text-white border border-[#0b8043] px-3 md:px-4 py-1 hover:bg-[#0b8043] disabled:opacity-50 whitespace-nowrap">매크로 실행</button>
+                <button id="btn-ready" onclick="toggleReady()" class="hidden bg-[#1a73e8] text-white border border-[#1557b0] px-3 md:px-4 py-1 hover:bg-[#1557b0] transition-colors disabled:opacity-50 whitespace-nowrap">데이터 커밋</button>
+                <button id="btn-next" onclick="nextRound()" class="hidden bg-[#f1f3f4] text-[#333] border border-[#ccc] px-3 md:px-4 py-1 hover:bg-[#e8eaed] disabled:opacity-50 whitespace-nowrap">다음 레코드</button>
             </div>
         </div>
     </div>
@@ -205,26 +206,26 @@
                     if(state.roomData.status === 'revealed') {
                         const occupier = occupiers[0];
                         slot.innerHTML = `
-                            <div class="w-10 cell-border bg-[#f8f9fa] flex items-center justify-center text-[#5f6368]">${i}</div>
-                            <div class="flex-1 cell-border px-3 py-1.5 text-right font-mono font-bold" style="color: ${occupier.color}">${occupier.secret_number}</div>
-                            <div class="w-32 cell-border px-3 py-1.5 text-[#333] flex items-center gap-2"><div class="w-2 h-2 rounded-full" style="background-color: ${occupier.color}"></div>${occupier.user_name}</div>
-                            <div class="w-16 cell-border px-3 py-1.5 text-center text-[#0f9d58]">완료</div>
+                            <div class="w-8 md:w-10 cell-border bg-[#f8f9fa] flex items-center justify-center text-[#5f6368]">${i}</div>
+                            <div class="flex-1 cell-border px-2 md:px-3 py-1.5 text-right font-mono font-bold" style="color: ${occupier.color}">${occupier.secret_number}</div>
+                            <div class="w-24 md:w-32 cell-border px-2 md:px-3 py-1.5 text-[#333] flex items-center gap-1.5 truncate"><div class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: ${occupier.color}"></div><span class="truncate">${occupier.user_name}</span></div>
+                            <div class="w-12 md:w-16 cell-border px-2 md:px-3 py-1.5 text-center text-[#0f9d58]">완료</div>
                         `;
                     } else {
-                        let dots = occupiers.map(occ => `<div class="w-2 h-2 rounded-full" style="background-color: ${occ.color}"></div>`).join('');
+                        let dots = occupiers.map(occ => `<div class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: ${occ.color}"></div>`).join('');
                         slot.innerHTML = `
-                            <div class="w-10 cell-border bg-[#f8f9fa] flex items-center justify-center text-[#5f6368]">${i}</div>
-                            <div class="flex-1 cell-border px-3 py-1.5 text-[#9aa0a6] italic flex items-center gap-2">${dots} 수신 중...</div>
-                            <div class="w-32 cell-border px-3 py-1.5 text-[#9aa0a6]">대기</div>
-                            <div class="w-16 cell-border px-3 py-1.5 text-center text-[#f29900]">진행</div>
+                            <div class="w-8 md:w-10 cell-border bg-[#f8f9fa] flex items-center justify-center text-[#5f6368]">${i}</div>
+                            <div class="flex-1 cell-border px-2 md:px-3 py-1.5 text-[#9aa0a6] italic flex items-center gap-1">${dots} <span class="hidden md:inline">수신 중...</span></div>
+                            <div class="w-24 md:w-32 cell-border px-2 md:px-3 py-1.5 text-[#9aa0a6]">대기</div>
+                            <div class="w-12 md:w-16 cell-border px-2 md:px-3 py-1.5 text-center text-[#f29900]">진행</div>
                         `;
                     }
                 } else {
                     slot.innerHTML = `
-                        <div class="w-10 cell-border bg-[#f8f9fa] flex items-center justify-center text-[#5f6368]">${i}</div>
-                        <div class="flex-1 cell-border px-3 py-1.5"></div>
-                        <div class="w-32 cell-border px-3 py-1.5"></div>
-                        <div class="w-16 cell-border px-3 py-1.5"></div>
+                        <div class="w-8 md:w-10 cell-border bg-[#f8f9fa] flex items-center justify-center text-[#5f6368]">${i}</div>
+                        <div class="flex-1 cell-border px-2 md:px-3 py-1.5"></div>
+                        <div class="w-24 md:w-32 cell-border px-2 md:px-3 py-1.5"></div>
+                        <div class="w-12 md:w-16 cell-border px-2 md:px-3 py-1.5"></div>
                     `;
                 }
                 slotsContainer.appendChild(slot);
@@ -242,7 +243,7 @@
             document.getElementById('btn-force-end').classList.toggle('hidden', state.roomData.status !== 'playing');
             
             const btnReady = document.getElementById('btn-ready');
-            btnReady.innerText = state.myPlayerInfo?.is_ready ? "커밋 취소 (Undo)" : "데이터 커밋 (Commit)";
+            btnReady.innerText = state.myPlayerInfo?.is_ready ? "커밋 취소" : "데이터 커밋";
             btnReady.disabled = !isAllPlaced || hasConflict;
             
             if(state.myPlayerInfo?.is_ready) {
@@ -253,8 +254,8 @@
 
             const btnNext = document.getElementById('btn-next');
             if (state.roomData.status === 'revealed' && prevStatus === 'playing') {
-                btnNext.disabled = true; btnNext.innerText = "처리 중..."; setTimeout(() => { btnNext.disabled = false; btnNext.innerText = "다음 레코드 (라운드)"; }, 2000);
-            } else if (state.roomData.status === 'revealed') { btnNext.disabled = false; btnNext.innerText = "다음 레코드 (라운드)"; }
+                btnNext.disabled = true; btnNext.innerText = "처리 중..."; setTimeout(() => { btnNext.disabled = false; btnNext.innerText = "다음 레코드"; }, 2000);
+            } else if (state.roomData.status === 'revealed') { btnNext.disabled = false; btnNext.innerText = "다음 레코드"; }
             
             if(state.roomData.status === 'playing' && isAllReady) updateRoomStatus('revealed');
             prevStatus = state.roomData.status;
@@ -305,11 +306,10 @@
         function appendChatMessage(c) {
             const box = document.getElementById('chat-messages'); const isMe = c.user_name === state.user.user_metadata.display_name;
             const d = document.createElement('div'); d.className = "flex flex-col mb-2";
-            d.innerHTML = `<div class="text-[10px] font-bold text-[#333] mb-0.5 flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full" style="background-color: ${c.color}"></div>${c.user_name} ${isMe ? '<span class="text-[#9aa0a6] font-normal">(나)</span>' : ''}</div><div class="chat-bubble bg-white px-2 py-1 text-[#333]">${c.message}</div>`;
+            d.innerHTML = `<div class="text-[9px] md:text-[10px] font-bold text-[#333] mb-0.5 flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full" style="background-color: ${c.color}"></div>${c.user_name} ${isMe ? '<span class="text-[#9aa0a6] font-normal">(나)</span>' : ''}</div><div class="chat-bubble bg-white px-2 py-1 text-[#333]">${c.message}</div>`;
             box.appendChild(d); box.scrollTop = box.scrollHeight;
         }
 
-        // --- 기타 모달/유틸 함수 (기능 동일, CSS 모노톤 조정) ---
         function openMemberManage() { closeRoomManage(); const list = document.getElementById('member-manage-list'); list.innerHTML = state.players.map(p => `<div class="flex justify-between items-center py-2 border-b border-[#e2e3e3] last:border-0"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full" style="background-color: ${p.color}"></div><span class="text-[#333] font-medium">${p.user_name}</span></div>${p.user_id !== state.user.id ? `<button onclick="confirmKickMember('${p.user_id}', '${p.user_name}')" class="text-xs border border-[#ccc] px-2 py-1 hover:bg-[#f1f3f4]">제외</button>` : `<span class="text-xs text-[#9aa0a6]">관리자</span>`}</div>`).join(''); document.getElementById('modal-member-list').classList.remove('hidden'); }
         function closeMemberManage() { document.getElementById('modal-member-list').classList.add('hidden'); }
         function confirmKickMember(id, name) { openConfirmModal(`[${name}] 레코드를 제외하시겠습니까?\n프로세스가 재시작됩니다.`, () => handleKickMember(id)); }
