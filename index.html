@@ -223,18 +223,41 @@
         }
 
         async function loadMyGames() {
-            // 💡 최신 생성/참여 순서대로(내림차순) 불러오도록 order('id', { ascending: false }) 적용
-            const { data } = await supabaseClient.from('game_players').select(`room_code, is_active, id, game_rooms ( room_name, game_type )`).eq('user_id', user.id).order('id', { ascending: false });
+            // 1. 내가 참여한 플레이어 기록 가져오기 (가장 최근 참여순 정렬)
+            const { data: myPlayers, error } = await supabaseClient.from('game_players')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('id', { ascending: false });
+
             const activeList = document.getElementById('my-game-list');
             const historyList = document.getElementById('my-history-list');
-            
-            const validData = data ? data.filter(i => i.game_rooms !== null) : [];
+
+            // 참여 기록이 없거나 통신 에러 시 빈 목록 표시
+            if (error || !myPlayers || myPlayers.length === 0) {
+                activeList.innerHTML = `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-white border border-gray-200 rounded-xl">참여 중인 게임이 없습니다.</p>`;
+                historyList.innerHTML = `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-white border border-gray-200 rounded-xl">기록이 없습니다.</p>`;
+                return;
+            }
+
+            // 2. 방 코드(room_code)만 추출해서 방 정보 따로 가져오기 (DB 관계 설정 무관하게 100% 작동)
+            const roomCodes = myPlayers.map(p => p.room_code);
+            const { data: rooms } = await supabaseClient.from('game_rooms')
+                .select('*')
+                .in('room_code', roomCodes);
+
+            // 3. 자바스크립트에서 수동으로 데이터 합치기
+            const validData = myPlayers.map(p => {
+                const roomInfo = (rooms || []).find(r => r.room_code === p.room_code);
+                return { ...p, game_rooms: roomInfo || null };
+            }).filter(item => item.game_rooms !== null); // 방장이 방을 삭제(폭파)한 경우 제외
+
             const activeData = validData.filter(i => i.is_active !== false);
             const historyData = validData.filter(i => i.is_active === false);
 
             activeList.innerHTML = activeData.length ? activeData.map(i => createGameListItem(i, true)).join('') : `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-white border border-gray-200 rounded-xl">참여 중인 게임이 없습니다.</p>`;
             historyList.innerHTML = historyData.length ? historyData.map(i => createGameListItem(i, false)).join('') : `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-white border border-gray-200 rounded-xl">기록이 없습니다.</p>`;
         }
+
 
         async function createRoom() {
             const name = document.getElementById('roomName').value.trim();
