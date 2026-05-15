@@ -22,12 +22,46 @@
 </head>
 <body class="text-[#333333] h-[100dvh] w-screen overflow-hidden flex flex-col bg-[#f8f9fa]">
 
-    <div id="toast" class="fixed bottom-16 right-6 bg-[#323232] text-white px-4 py-2 opacity-0 transition-all z-[300] pointer-events-none text-xs w-max text-left shadow-md">시스템 알림</div>
+    <div id="toast" class="fixed bottom-12 right-6 bg-[#323232] text-white px-4 py-2 opacity-0 transition-all z-[300] pointer-events-none text-xs w-max text-left shadow-md">시스템 알림</div>
 
     <div id="modal-room-manage" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[200]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333]">도구 (관리)</div><div class="p-4 flex flex-col gap-2"><button onclick="openMemberManage()" class="border border-[#ccc] py-1.5 px-3 hover:bg-[#f1f3f4] text-left">참여자 권한 관리</button><button onclick="handleShareRoom()" class="border border-[#ccc] py-1.5 px-3 hover:bg-[#f1f3f4] text-left">공유 링크 복사</button><button onclick="openRenameModal()" class="border border-[#ccc] py-1.5 px-3 hover:bg-[#f1f3f4] text-left">시트 이름 변경</button><div class="border-t border-[#ccc] mt-2 pt-2"><button onclick="confirmDeleteRoom()" class="border border-[#ccc] bg-[#fce8e6] text-[#c5221f] py-1.5 px-3 hover:bg-[#fad2cf] w-full text-left">데이터 영구 삭제 (폭파)</button></div></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right"><button onclick="closeRoomManage()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">닫기</button></div></div></div>
     <div id="modal-member-list" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[210]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333]">참여자 권한 관리</div><div id="member-manage-list" class="p-4 max-h-60 overflow-y-auto space-y-1"></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right"><button onclick="closeMemberManage()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">닫기</button></div></div></div>
     <div id="modal-rename" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[220]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333]">시트 이름 변경</div><div class="p-4"><input type="text" id="renameInput" class="w-full p-2 border border-[#ccc] outline-none focus:border-[#1a73e8]"></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right flex justify-end gap-2"><button onclick="closeRenameModal()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">취소</button><button onclick="handleRenameRoom()" class="bg-[#1a73e8] text-white border border-[#1a73e8] px-4 py-1 hover:bg-[#1557b0]">적용</button></div></div></div>
     <div id="modal-confirm" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[230]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#fce8e6] border-b border-[#ccc] px-4 py-2 font-bold text-[#c5221f]">시스템 경고</div><div class="p-6"><p id="confirm-message" class="text-[#333] whitespace-pre-line"></p></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right flex justify-end gap-2"><button onclick="closeConfirmModal()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">취소</button><button id="btn-confirm-action" class="bg-[#c5221f] text-white border border-[#c5221f] px-4 py-1 hover:bg-[#a50e0e]">확인</button></div></div></div>
+
+    <div id="modal-help" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[250]">
+        <div class="bg-white border border-[#ccc] shadow-lg w-full max-w-lg p-0 text-sm flex flex-col max-h-[85vh]">
+            <div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333] flex justify-between items-center">
+                <span>도움말 : 마음의 실타래 사용자 가이드</span>
+                <button onclick="closeHelpModal()" class="text-[#999] hover:text-[#333] font-bold">X</button>
+            </div>
+            <div class="p-5 overflow-y-auto space-y-4 text-[#333] leading-relaxed text-xs md:text-sm">
+                <div>
+                    <h3 class="font-bold text-[#1a73e8] mb-1">1. 게임 목표</h3>
+                    <p>모든 플레이어가 대화 없이 각자의 <b>비밀 숫자(1~100)를 오름차순(작은 수부터 큰 수 순서)으로 배치</b>하여 완벽한 순서를 맞추는 텔레파시 협동 게임입니다.</p>
+                </div>
+                <div>
+                    <h3 class="font-bold text-[#1a73e8] mb-1">2. 게임 진행 방식</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>게임이 시작되면 <b>특정 주제(예: "무인도 생존 필수템")</b>가 수식창에 공개되고, 각자 다른 비밀 숫자(1~100)를 배정받습니다.</li>
+                        <li>자신의 숫자가 주제에서 어느 정도의 위치(1=쓸모없음, 100=매우 필수)인지 상상해봅니다.</li>
+                        <li>눈치껏 본인 차례가 되었다고 판단될 때, 알맞은 순서(1번부터)의 슬롯을 누르고 하단의 <b>[데이터 커밋]</b>을 누릅니다.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-[#1a73e8] mb-1">3. 승리 조건 및 예시</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>모두가 배치를 완료했을 때, 1번 슬롯부터 마지막 슬롯까지 <b>숫자가 점점 커지는 오름차순</b>이어야 성공합니다.</li>
+                        <li><span class="bg-[#f1f3f4] px-1">예시 성공: A(12) -> B(45) -> C(88)</span> 순서대로 칸에 넣었을 때.</li>
+                        <li><span class="bg-[#fce8e6] px-1">예시 실패: A(88) -> B(12) -> C(45)</span> 순서가 꼬이면 미션 실패입니다!</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right">
+                <button onclick="closeHelpModal()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">닫기</button>
+            </div>
+        </div>
+    </div>
 
     <div id="screen-color" class="hidden flex-1 items-center justify-center bg-[#f8f9fa]"><div class="bg-white border border-[#ccc] shadow-sm p-6 w-full max-w-sm"><h2 class="text-sm font-bold text-[#333] mb-4 border-b pb-2">작업자 레이블 색상 할당</h2><div id="color-grid" class="grid grid-cols-5 gap-2 mb-4"></div><button onclick="goToLobby()" class="text-xs text-[#1a73e8] underline">세션 종료 (로비로)</button></div></div>
 
@@ -43,6 +77,7 @@
                     <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer hidden md:inline">보기</span>
                     <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer hidden md:inline">데이터</span>
                     <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer text-[#1a73e8]" onclick="openRoomManage()">도구(관리)</span>
+                    <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer font-bold text-[#0f9d58]" onclick="openHelpModal()">도움말(Help)</span>
                 </div>
             </div>
             <div class="hidden md:flex items-center gap-2 border-r border-[#ccc] pr-4 mr-2">
@@ -57,7 +92,6 @@
         </div>
 
         <div class="flex-1 flex flex-col md:flex-row overflow-hidden bg-white">
-            
             <div class="flex-1 flex flex-col md:border-r border-[#e2e3e3] overflow-y-auto bg-white">
                 <div class="flex bg-[#f8f9fa] border-b border-[#e2e3e3] text-[10px] md:text-[11px] text-[#5f6368] font-medium sticky top-0 z-10">
                     <div class="w-8 md:w-10 cell-border flex justify-center py-1 flex-shrink-0">#</div>
@@ -116,6 +150,10 @@
         function showToast(msg) { const toast = document.getElementById('toast'); toast.innerText = msg; toast.classList.remove('opacity-0', 'translate-y-5'); setTimeout(() => toast.classList.add('opacity-0', 'translate-y-5'), 2000); }
         function showLoading(show) { document.getElementById('loading').classList.toggle('hidden', !show); }
         function goToLobby() { window.location.href = 'index.html'; }
+
+        // 도움말 모달 제어 함수
+        function openHelpModal() { document.getElementById('modal-help').classList.remove('hidden'); }
+        function closeHelpModal() { document.getElementById('modal-help').classList.add('hidden'); }
 
         window.onload = async () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -198,7 +236,7 @@
             slotsContainer.innerHTML = "";
             for(let i=1; i<=slotsCount; i++) {
                 const slot = document.createElement('div');
-                slot.className = "flex w-full row-hover cursor-pointer";
+                slot.className = "flex w-full row-hover cursor-pointer border-b border-[#e2e3e3] last:border-0";
                 slot.onclick = () => selectSlot(i);
                 const occupiers = state.players.filter(p => p.selected_slot === i);
                 
@@ -206,26 +244,26 @@
                     if(state.roomData.status === 'revealed') {
                         const occupier = occupiers[0];
                         slot.innerHTML = `
-                            <div class="w-8 md:w-10 cell-border bg-[#f8f9fa] flex items-center justify-center text-[#5f6368]">${i}</div>
-                            <div class="flex-1 cell-border px-2 md:px-3 py-1.5 text-right font-mono font-bold" style="color: ${occupier.color}">${occupier.secret_number}</div>
-                            <div class="w-24 md:w-32 cell-border px-2 md:px-3 py-1.5 text-[#333] flex items-center gap-1.5 truncate"><div class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: ${occupier.color}"></div><span class="truncate">${occupier.user_name}</span></div>
-                            <div class="w-12 md:w-16 cell-border px-2 md:px-3 py-1.5 text-center text-[#0f9d58]">완료</div>
+                            <div class="w-8 md:w-10 cell-border bg-[#f8f9fa] flex items-center justify-center text-[#5f6368] py-2 flex-shrink-0">${i}</div>
+                            <div class="flex-1 cell-border px-2 md:px-3 py-2 text-right font-mono font-bold" style="color: ${occupier.color}">${occupier.secret_number}</div>
+                            <div class="w-24 md:w-32 cell-border px-2 md:px-3 py-2 text-[#333] flex items-center gap-1.5 truncate flex-shrink-0"><div class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: ${occupier.color}"></div><span class="truncate">${occupier.user_name}</span></div>
+                            <div class="w-12 md:w-16 cell-border px-2 md:px-3 py-2 text-center text-[#0f9d58] flex-shrink-0">완료</div>
                         `;
                     } else {
                         let dots = occupiers.map(occ => `<div class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: ${occ.color}"></div>`).join('');
                         slot.innerHTML = `
-                            <div class="w-8 md:w-10 cell-border bg-[#f8f9fa] flex items-center justify-center text-[#5f6368]">${i}</div>
-                            <div class="flex-1 cell-border px-2 md:px-3 py-1.5 text-[#9aa0a6] italic flex items-center gap-1">${dots} <span class="hidden md:inline">수신 중...</span></div>
-                            <div class="w-24 md:w-32 cell-border px-2 md:px-3 py-1.5 text-[#9aa0a6]">대기</div>
-                            <div class="w-12 md:w-16 cell-border px-2 md:px-3 py-1.5 text-center text-[#f29900]">진행</div>
+                            <div class="w-8 md:w-10 cell-border bg-[#f8f9fa] flex items-center justify-center text-[#5f6368] py-2 flex-shrink-0">${i}</div>
+                            <div class="flex-1 cell-border px-2 md:px-3 py-2 text-[#9aa0a6] italic flex items-center gap-1">${dots} <span class="hidden md:inline">수신 중...</span></div>
+                            <div class="w-24 md:w-32 cell-border px-2 md:px-3 py-2 text-[#9aa0a6] flex-shrink-0">대기</div>
+                            <div class="w-12 md:w-16 cell-border px-2 md:px-3 py-2 text-center text-[#f29900] flex-shrink-0">진행</div>
                         `;
                     }
                 } else {
                     slot.innerHTML = `
-                        <div class="w-8 md:w-10 cell-border bg-[#f8f9fa] flex items-center justify-center text-[#5f6368]">${i}</div>
-                        <div class="flex-1 cell-border px-2 md:px-3 py-1.5"></div>
-                        <div class="w-24 md:w-32 cell-border px-2 md:px-3 py-1.5"></div>
-                        <div class="w-12 md:w-16 cell-border px-2 md:px-3 py-1.5"></div>
+                        <div class="w-8 md:w-10 cell-border bg-[#f8f9fa] flex items-center justify-center text-[#5f6368] py-2 flex-shrink-0">${i}</div>
+                        <div class="flex-1 cell-border px-2 md:px-3 py-2"></div>
+                        <div class="w-24 md:w-32 cell-border px-2 md:px-3 py-2 flex-shrink-0"></div>
+                        <div class="w-12 md:w-16 cell-border px-2 md:px-3 py-2 flex-shrink-0"></div>
                     `;
                 }
                 slotsContainer.appendChild(slot);
@@ -243,7 +281,7 @@
             document.getElementById('btn-force-end').classList.toggle('hidden', state.roomData.status !== 'playing');
             
             const btnReady = document.getElementById('btn-ready');
-            btnReady.innerText = state.myPlayerInfo?.is_ready ? "커밋 취소" : "데이터 커밋";
+            btnReady.innerText = state.myPlayerInfo?.is_ready ? "커밋 취소 (Undo)" : "데이터 커밋 (Commit)";
             btnReady.disabled = !isAllPlaced || hasConflict;
             
             if(state.myPlayerInfo?.is_ready) {
@@ -306,7 +344,7 @@
         function appendChatMessage(c) {
             const box = document.getElementById('chat-messages'); const isMe = c.user_name === state.user.user_metadata.display_name;
             const d = document.createElement('div'); d.className = "flex flex-col mb-2";
-            d.innerHTML = `<div class="text-[9px] md:text-[10px] font-bold text-[#333] mb-0.5 flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full" style="background-color: ${c.color}"></div>${c.user_name} ${isMe ? '<span class="text-[#9aa0a6] font-normal">(나)</span>' : ''}</div><div class="chat-bubble bg-white px-2 py-1 text-[#333]">${c.message}</div>`;
+            d.innerHTML = `<div class="text-[9px] md:text-[10px] font-bold text-[#333] mb-0.5 flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full" style="background-color: ${c.color}"></div>${c.user_name} ${isMe ? '<span class="text-[#9aa0a6] font-normal">(나)</span>' : ''}</div><div class="chat-bubble bg-white px-2 py-1 text-[#333] shadow-sm">${c.message}</div>`;
             box.appendChild(d); box.scrollTop = box.scrollHeight;
         }
 
@@ -317,7 +355,15 @@
 
         function openRoomManage() { document.getElementById('modal-room-manage').classList.remove('hidden'); }
         function closeRoomManage() { document.getElementById('modal-room-manage').classList.add('hidden'); }
-        async function handleShareRoom() { const t = `[공유 워크스페이스]\n시트: ${state.roomData.room_name}\n엑세스 키: ${state.roomCode}\n접속: ${window.location.origin}/mannaja_gmroom/mind.html?code=${state.roomCode}`; try { await copyToClipboard(t); } catch (e) {} closeRoomManage(); }
+        
+        async function handleShareRoom() { 
+            const baseUrl = window.location.href.split('?')[0];
+            const t = `[공유 워크스페이스]\n시트: ${state.roomData.room_name}\n엑세스 키: ${state.roomCode}\n접속: ${baseUrl}?code=${state.roomCode}`; 
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            try { if (isMobile && navigator.share) { await navigator.share({ text: t }); } else { await copyToClipboard(t); } } catch (e) { await copyToClipboard(t); } 
+            closeRoomManage(); 
+        }
+        
         async function copyToClipboard(text) { if (navigator.clipboard && window.isSecureContext) { try { await navigator.clipboard.writeText(text); showToast("클립보드에 복사됨"); return; } catch (err) {} } const textArea = document.createElement("textarea"); textArea.value = text; textArea.style.position = "fixed"; textArea.style.left = "-9999px"; textArea.style.top = "0"; document.body.appendChild(textArea); textArea.focus(); textArea.select(); try { document.execCommand('copy'); showToast("클립보드에 복사됨"); } catch (err) { showToast("복사 실패"); } document.body.removeChild(textArea); }
         function openRenameModal() { closeRoomManage(); document.getElementById('renameInput').value = state.roomData.room_name; document.getElementById('modal-rename').classList.remove('hidden'); }
         function closeRenameModal() { document.getElementById('modal-rename').classList.add('hidden'); }
