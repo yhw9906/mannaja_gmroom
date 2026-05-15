@@ -307,11 +307,18 @@
                     }
                 }
 
-                const isStop = gs.stops && gs.stops[idx];
-                let stopHtml = isStop 
-                    ? `<button onclick="toggleStop(${idx})" class="text-[9px] md:text-[10px] bg-[#fce8e6] text-[#c5221f] px-1 py-1 font-black border border-[#f2bdb9] hover:bg-[#fad2cf] shadow-sm w-full mx-0.5">STOP</button>` 
-                    : `<button onclick="toggleStop(${idx})" class="text-[9px] md:text-[10px] bg-white text-[#9aa0a6] px-1 py-1 font-bold border border-[#e2e3e3] hover:bg-[#f1f3f4] w-full mx-0.5">보류</button>`;
+                
+                                                
+                // 💡 수정된 부분: 누가 STOP을 눌렀는지 이름과 색상을 렌더링
+                const stopData = gs.stops && gs.stops[idx];
+                let stopHtml = stopData 
+                    ? `<button onclick="toggleStop(${idx})" class="flex flex-col items-center justify-center text-[10px] md:text-[11px] bg-[#fce8e6] text-[#c5221f] px-1 py-0.5 font-black border border-[#f2bdb9] hover:bg-[#fad2cf] shadow-sm w-full mx-0.5 h-full overflow-hidden leading-tight">
+                           <span>STOP!</span>
+                           <span class="text-[7px] md:text-[8px] font-bold px-1 rounded text-white truncate max-w-full mt-0.5" style="background-color: ${stopData.color};">${stopData.name}</span>
+                       </button>` 
+                    : `<button onclick="toggleStop(${idx})" class="text-[9px] md:text-[10px] bg-white text-[#9aa0a6] px-1 py-1 font-bold border border-[#e2e3e3] hover:bg-[#f1f3f4] w-full mx-0.5 h-full">보류</button>`;
 
+                
                 pilesHTML += `
                 <div class="flex w-full row-hover h-10 md:h-12 border-b border-[#e2e3e3] last:border-0 box-border overflow-hidden bg-white">
                     <div class="w-[8%] md:w-[10%] cell-border bg-[#f8f9fa] fixed-cell text-[#5f6368] flex-shrink-0">${idx+1}</div>
@@ -440,13 +447,23 @@
 
             let gs = JSON.parse(room.current_theme || "{}");
             if(!gs.stops) gs.stops = [false, false, false, false];
-            gs.stops[pileIdx] = !gs.stops[pileIdx];
+            
+            // 💡 수정된 부분: 이미 스탑이면 해제, 아니면 누른 사람의 이름과 색상을 객체로 저장
+            if (gs.stops[pileIdx]) {
+                gs.stops[pileIdx] = false;
+            } else {
+                gs.stops[pileIdx] = { 
+                    name: state.myPlayerInfo.user_name, 
+                    color: state.myPlayerInfo.color 
+                };
+            }
             
             state.roomData.current_theme = JSON.stringify(gs);
-            renderUI(); 
+            renderUI(); // 즉시 화면에 반영
             
             await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs) }).eq('room_code', state.roomCode);
         }
+
 
         async function endTurn() {
             const btn = document.getElementById('btn-end-turn');
