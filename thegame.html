@@ -14,13 +14,15 @@
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 0px; }
         ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-        .chat-bubble { border-radius: 0px; border-left: 3px solid #1a73e8; }
+        .chat-bubble { border-radius: 0px; border-left: 3px solid #1a73e8; transition: all 0.3s ease; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .cell-border { border-right: 1px solid #e2e3e3; border-bottom: 1px solid #e2e3e3; }
         .fixed-cell { height: 100%; display: flex; align-items: center; justify-content: center; }
         .card-btn { transition: all 0.1s; }
-        .card-btn.selected { background-color: #1a73e8; color: white; border-color: #1557b0; font-weight: bold; }
+        .card-btn.selected { background-color: #1a73e8; color: white; border-color: #1557b0; font-weight: bold; transform: translateY(-3px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .value-changed { animation: highlight 1.5s ease-out; }
+        @keyframes highlight { 0% { background-color: #fbbc04; color: white; } 100% { background-color: transparent; } }
     </style>
 </head>
 <body class="text-[#333333] h-[100dvh] w-screen overflow-hidden flex flex-col bg-[#f8f9fa]">
@@ -53,16 +55,17 @@
                 <div>
                     <h3 class="font-bold text-[#ea4335] mb-1">3. 턴 진행 (의무 사항)</h3>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li>자기 턴에는 <b>최소 2장 이상</b>의 카드를 배치해야 턴을 종료할 수 있습니다. (원한다면 전부 내도 됩니다.)</li>
+                        <li>자기 턴에는 <b>최소 2장 이상</b>의 카드를 한 장씩 배치해야 턴을 종료할 수 있습니다.</li>
                         <li>덱이 다 떨어져서 보충을 못 받는 후반부에는 최소 1장만 내도 됩니다.</li>
+                        <li>우측의 STOP 보류 마커나 채팅 기능을 활용하여 타인과 타이밍을 조율하세요.</li>
                     </ul>
                 </div>
                 <div>
                     <h3 class="font-bold text-[#0f9d58] mb-1">4. 핵심 전략: 10의 법칙 (역주행)</h3>
-                    <p>원래 큰 수(또는 작은 수)만 넣어야 하지만, <b>정확히 10이 차이나는 수</b>라면 역방향으로 넣어서 더미를 깎아내릴 수 있습니다!</p>
+                    <p>원래 큰 수(또는 작은 수)만 넣어야 하지만, <b>정확히 10이 차이나는 수</b>라면 역방향으로 넣어서 더미를 깎아내릴 수 있습니다! (해당 카드는 음영 처리됩니다.)</p>
                     <ul class="list-disc pl-5 mt-1">
-                        <li><span class="bg-[#f1f3f4] px-1">오름차순 예시:</span> 현재 45일 때, 원래 45보다 큰 수를 내야하지만 <b>35</b>를 내서 숫자를 줄일 수 있습니다.</li>
-                        <li><span class="bg-[#f1f3f4] px-1">내림차순 예시:</span> 현재 50일 때, <b>60</b>을 내서 숫자를 키울 수 있습니다.</li>
+                        <li><span class="bg-[#f1f3f4] px-1">오름차순 예시:</span> 현재 45일 때, <b>35</b>를 내서 숫자를 뒤로 되돌릴 수 있습니다.</li>
+                        <li><span class="bg-[#f1f3f4] px-1">내림차순 예시:</span> 현재 50일 때, <b>60</b>을 내서 숫자를 뒤로 되돌릴 수 있습니다.</li>
                     </ul>
                 </div>
             </div>
@@ -96,7 +99,7 @@
 
         <div class="flex items-center border-b border-[#e2e3e3] bg-white flex-shrink-0 text-xs md:text-sm h-8 md:h-10">
             <div class="w-8 md:w-10 h-full flex justify-center items-center text-[#5f6368] font-serif italic border-r border-[#e2e3e3] bg-[#f8f9fa] flex-shrink-0">fx</div>
-            <div id="display-theme" class="flex-1 px-3 text-[#1a73e8] font-mono font-bold outline-none truncate">대기 중...</div>
+            <div id="display-theme" class="flex-1 px-3 text-[#1a73e8] font-mono font-bold outline-none truncate transition-colors duration-300">대기 중...</div>
         </div>
 
         <div class="flex-1 flex flex-col md:flex-row overflow-hidden bg-white">
@@ -105,9 +108,10 @@
                 
                 <div class="flex bg-[#f8f9fa] border-b border-[#e2e3e3] text-[10px] md:text-[11px] text-[#5f6368] font-medium min-w-max h-7 md:h-8">
                     <div class="w-8 md:w-10 cell-border flex justify-center items-center flex-shrink-0">#</div>
-                    <div class="w-32 md:w-40 cell-border px-2 flex items-center">더미 속성 (Rule)</div>
+                    <div class="w-32 md:w-40 cell-border px-2 flex justify-center items-center">더미 속성 (Rule)</div>
                     <div class="w-24 md:w-32 cell-border px-2 flex justify-center items-center text-[#333] font-bold">현재 값 (Top)</div>
                     <div class="w-24 md:w-32 cell-border px-2 flex justify-center items-center">적용 (Action)</div>
+                    <div class="w-16 md:w-20 cell-border px-2 flex justify-center items-center">보류 (Stop)</div>
                 </div>
                 
                 <div id="piles-container" class="flex-col w-full text-[11px] md:text-[13px] min-w-max"></div>
@@ -116,7 +120,6 @@
                     ▼ 로컬 데이터 (My Hand)
                 </div>
                 <div id="hand-container" class="flex flex-wrap p-3 gap-2"></div>
-
             </div>
 
             <div class="h-1/3 md:h-full w-full md:w-72 bg-white flex flex-col flex-shrink-0 border-t md:border-t-0 border-[#e2e3e3]">
@@ -156,8 +159,9 @@
         const COLORS = ["#ea4335", "#f29900", "#fbbc04", "#34a853", "#46bdc6", "#4285f4", "#8ab4f8", "#9334e6", "#f06292", "#9aa0a6"];
         const state = { user: null, roomCode: null, roomData: null, players: [], myPlayerInfo: null };
         
-        let localSelectedCard = null; // 내 손패에서 선택한 카드
-        let isProcessingMove = false; // 중복 클릭 방지
+        let localSelectedCard = null; 
+        let isProcessingMove = false; 
+        let previousPiles = [1, 1, 100, 100];
 
         function showToast(msg) { const toast = document.getElementById('toast'); toast.innerText = msg; toast.classList.remove('opacity-0', 'translate-y-5'); setTimeout(() => toast.classList.add('opacity-0', 'translate-y-5'), 2000); }
         function showLoading(show) { document.getElementById('loading').classList.toggle('hidden', !show); }
@@ -236,37 +240,50 @@
 
             state.roomData = room; state.players = players; state.myPlayerInfo = me;
 
-            // 로컬에 들고있던 선택 카드가 내 패에 더 이상 없으면 초기화
             const myHand = parseBoard(state.myPlayerInfo.board_state);
             if (localSelectedCard !== null && !myHand.includes(localSelectedCard)) {
                 localSelectedCard = null;
             }
-
             renderUI();
         }
 
         function renderUI() {
             document.getElementById('room-info-display').innerText = `[공유] ${state.roomData.room_name} (ID: ${state.roomCode})`;
             
-            let gs = { piles: [1, 1, 100, 100], deck: [], turnIndex: 0, cardsPlayedThisTurn: 0 };
-            if (state.roomData.status !== 'waiting') { try { gs = JSON.parse(state.roomData.current_theme || "{}"); } catch(e) {} }
+            let gs = { piles: [1, 1, 100, 100], deck: [], turnIndex: 0, cardsPlayedThisTurn: 0, stops: [false, false, false, false] };
+            if (state.roomData.status !== 'waiting') { 
+                try { 
+                    gs = JSON.parse(state.roomData.current_theme || "{}"); 
+                    if(!gs.stops) gs.stops = [false, false, false, false];
+                } catch(e) {} 
+            }
 
             const activePlayer = state.players[gs.turnIndex % Math.max(state.players.length, 1)];
             const isMyTurn = (state.roomData.status === 'playing') && (activePlayer?.user_id === state.user.id);
             const myHand = parseBoard(state.myPlayerInfo.board_state);
 
-            // 승리/패배 조건 체크 렌더링
             let displayMsg = "#WAITING_FOR_MACRO";
+            let displayThemeEl = document.getElementById('display-theme');
+            displayThemeEl.className = "flex-1 px-3 font-mono font-bold outline-none truncate transition-colors duration-300"; 
+            
             if (state.roomData.status === 'revealed') {
                 const allHandsEmpty = state.players.every(p => parseBoard(p.board_state).length === 0);
-                if (gs.deck && gs.deck.length === 0 && allHandsEmpty) displayMsg = "=RESULT(Status: 'SUCCESS_WIN', Msg: '완벽한 승리!')";
-                else displayMsg = "=RESULT(Status: 'GAME_OVER', Msg: '데이터 병합 실패')";
+                if (gs.deck && gs.deck.length === 0 && allHandsEmpty) {
+                    displayMsg = "=RESULT(Status: 'SUCCESS_WIN', Msg: '완벽한 승리!')";
+                    displayThemeEl.classList.add('text-[#0f9d58]');
+                } else {
+                    displayMsg = "=RESULT(Status: 'GAME_OVER', Msg: '데이터 병합 실패')";
+                    displayThemeEl.classList.add('text-[#ea4335]');
+                }
             } else if (state.roomData.status === 'playing') {
-                displayMsg = `=TURN(Active: "${activePlayer?.user_name}", ActionReq: ${isMyTurn ? "TRUE" : "FALSE"})`;
+                // 💡 피드백 반영: 실시간 ActionReq 장수 표기
+                displayMsg = `=TURN(Active: "${activePlayer?.user_name}", Played_Cards: ${gs.cardsPlayedThisTurn})`;
+                if(isMyTurn) displayThemeEl.classList.add('bg-[#e8f0fe]', 'text-[#1a73e8]');
+                else displayThemeEl.classList.add('text-[#5f6368]');
             }
-            document.getElementById('display-theme').innerText = displayMsg;
+            displayThemeEl.innerText = displayMsg;
 
-            // 보드판 (4개 더미) 렌더링
+            // 보드판 (4개 더미)
             const pilesConfig = [
                 { id: 0, type: "오름차순 (1→99)", color: "text-[#ea4335]" },
                 { id: 1, type: "오름차순 (1→99)", color: "text-[#ea4335]" },
@@ -279,32 +296,50 @@
                 const currentVal = gs.piles ? gs.piles[idx] : (idx < 2 ? 1 : 100);
                 let btnHtml = `<button disabled class="bg-[#f1f3f4] text-[#ccc] border border-[#ccc] px-3 py-1 text-xs">불가</button>`;
                 
+                let valClass = "text-[#333]";
+                if (previousPiles[idx] !== currentVal) { valClass = "value-changed"; }
+
                 if (isMyTurn && localSelectedCard !== null) {
                     let isValid = false;
                     if (idx < 2) isValid = (localSelectedCard > currentVal) || (localSelectedCard === currentVal - 10);
                     else isValid = (localSelectedCard < currentVal) || (localSelectedCard === currentVal + 10);
 
                     if (isValid) {
-                        btnHtml = `<button onclick="playCard(${idx})" class="bg-[#f29900] text-white border border-[#c77e00] px-3 py-1 text-xs font-bold hover:bg-[#c77e00] shadow-sm">적용</button>`;
+                        btnHtml = `<button onclick="playCard(${idx})" class="bg-[#f29900] text-white border border-[#c77e00] px-3 py-1 text-xs font-bold hover:bg-[#c77e00] shadow-sm transform hover:scale-105 transition-transform">적용</button>`;
                     }
                 }
+
+                // 💡 피드백 반영: STOP 열 렌더링
+                const isStop = gs.stops && gs.stops[idx];
+                let stopHtml = isStop ? `<span class="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 font-bold border border-red-300 rounded-sm">STOP</span>` : `<span class="text-[#ccc]">-</span>`;
 
                 pilesHTML += `
                 <div class="flex w-full min-w-max row-hover h-10 md:h-12 border-b border-[#e2e3e3] last:border-0 box-border overflow-hidden bg-white">
                     <div class="w-8 md:w-10 cell-border bg-[#f8f9fa] fixed-cell text-[#5f6368] flex-shrink-0">${idx+1}</div>
                     <div class="w-32 md:w-40 cell-border fixed-cell text-[#5f6368] ${p.color} flex-shrink-0 text-[10px] md:text-xs font-bold">${p.type}</div>
-                    <div class="w-24 md:w-32 cell-border fixed-cell text-lg md:text-xl font-black text-[#333] flex-shrink-0">${currentVal}</div>
+                    <div class="w-24 md:w-32 cell-border fixed-cell text-lg md:text-xl font-black flex-shrink-0 ${valClass} transition-colors">${currentVal}</div>
                     <div class="w-24 md:w-32 cell-border fixed-cell flex-shrink-0">${btnHtml}</div>
+                    <div class="w-16 md:w-20 cell-border fixed-cell flex-shrink-0 cursor-pointer hover:bg-gray-100 transition-colors" onclick="toggleStop(${idx})">${stopHtml}</div>
                 </div>`;
             });
             document.getElementById('piles-container').innerHTML = pilesHTML;
+            if(gs.piles) previousPiles = [...gs.piles]; 
 
-            // 내 패 (Hand) 렌더링
+            // 내 패 (Hand)
             let handHTML = "";
             myHand.forEach(card => {
                 const isSelected = (card === localSelectedCard);
+                // 💡 피드백 반영: 10의 법칙 적용 가능 카드 음영 처리 (bg-gray-200)
+                const isJump = gs.piles && gs.piles.some((p, i) => (i < 2 && card === p - 10) || (i >= 2 && card === p + 10));
+                
                 const baseClass = "w-10 h-14 md:w-12 md:h-16 flex items-center justify-center border rounded shadow-sm text-sm md:text-base cursor-pointer card-btn ";
-                const styleClass = isSelected ? "selected" : "bg-white border-[#ccc] text-[#333] hover:border-[#1a73e8]";
+                let styleClass = "bg-white border-[#ccc] text-[#333] hover:border-[#1a73e8]";
+                if (isSelected) {
+                    styleClass = "selected";
+                } else if (isJump) {
+                    styleClass = "bg-gray-200 border-[#999] text-[#333] shadow-inner font-bold";
+                }
+                
                 handHTML += `<div onclick="selectHandCard(${card})" class="${baseClass} ${styleClass}">${card}</div>`;
             });
             if (myHand.length === 0) handHTML = `<div class="text-[#9aa0a6] text-xs py-2 px-2">데이터가 없습니다.</div>`;
@@ -320,7 +355,6 @@
                 document.getElementById('deck-status').innerText = `Deck: ${gs.deck.length}장`;
                 
                 const btnEndTurn = document.getElementById('btn-end-turn');
-                // 턴 종료 조건: 최소 2장 냈거나 (덱이 없으면 1장), 손패가 아예 없거나
                 const minRequired = (gs.deck.length > 0) ? 2 : 1;
                 const canEnd = isMyTurn && (gs.cardsPlayedThisTurn >= minRequired || myHand.length === 0);
                 
@@ -334,12 +368,10 @@
             const { data: players, error } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true);
             if (error || !players || players.length === 0) { showLoading(false); btnStart.disabled = false; return; }
 
-            // 덱 생성 (2~99)
             let deck = [];
             for (let i=2; i<=99; i++) deck.push(i);
             deck.sort(() => Math.random() - 0.5);
 
-            // 초기 손패 설정
             const maxHand = players.length === 1 ? 8 : (players.length === 2 ? 7 : 6);
             for(let p of players) {
                 let hand = [];
@@ -348,7 +380,7 @@
                 await supabaseClient.from('game_players').update({ board_state: JSON.stringify(hand) }).eq('room_code', state.roomCode).eq('user_id', p.user_id);
             }
 
-            const gs = { piles: [1, 1, 100, 100], deck: deck, turnIndex: 0, cardsPlayedThisTurn: 0 };
+            const gs = { piles: [1, 1, 100, 100], deck: deck, turnIndex: 0, cardsPlayedThisTurn: 0, stops: [false, false, false, false] };
             await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs), status: 'playing' }).eq('room_code', state.roomCode);
             
             localSelectedCard = null;
@@ -360,7 +392,7 @@
             const activePlayer = state.players[gs.turnIndex % Math.max(state.players.length, 1)];
             if (activePlayer?.user_id !== state.user.id) return showToast("현재 당신의 턴이 아닙니다.");
             
-            if (localSelectedCard === val) localSelectedCard = null; // 토글 해제
+            if (localSelectedCard === val) localSelectedCard = null; 
             else localSelectedCard = val;
             renderUI();
         }
@@ -374,73 +406,85 @@
 
             if (!myHand.includes(localSelectedCard)) { isProcessingMove = false; return; }
 
-            // 낙관적 업데이트 (서버 통신 전 UI부터 변경하여 버벅임 제거)
             const cardToPlay = localSelectedCard;
             myHand = myHand.filter(c => c !== cardToPlay);
             gs.piles[pileIdx] = cardToPlay;
             gs.cardsPlayedThisTurn += 1;
+            if(!gs.stops) gs.stops = [false, false, false, false];
+            gs.stops[pileIdx] = false; // 카드를 놓으면 해당 더미 STOP 해제
             localSelectedCard = null;
 
-            // 로컬 상태 임시 반영
             state.myPlayerInfo.board_state = JSON.stringify(myHand);
             state.roomData.current_theme = JSON.stringify(gs);
             renderUI();
 
-            // 백그라운드 서버 동기화
             await Promise.all([
                 supabaseClient.from('game_players').update({ board_state: JSON.stringify(myHand) }).eq('room_code', state.roomCode).eq('user_id', state.user.id),
                 supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs) }).eq('room_code', state.roomCode)
             ]);
 
-            // 승리 체크
             if (gs.deck.length === 0 && myHand.length === 0) {
                 const { data: checkPlayers } = await supabaseClient.from('game_players').select('board_state').eq('room_code', state.roomCode).eq('is_active', true);
                 if (checkPlayers.every(p => parseBoard(p.board_state).length === 0)) {
                     await supabaseClient.from('game_rooms').update({ status: 'revealed' }).eq('room_code', state.roomCode);
                 }
             }
-
             isProcessingMove = false;
         }
 
+        // 💡 피드백 반영: 턴 종료 시 최신 DB 상태 강제 확인으로 안정성 대폭 강화
         async function endTurn() {
-            let gs = JSON.parse(state.roomData.current_theme);
+            const btn = document.getElementById('btn-end-turn');
+            btn.disabled = true;
+            showLoading(true);
+
+            // 턴이 꼬이지 않도록 서버에 있는 가장 최신 roomData를 다시 가져옵니다.
+            const { data: room, error: fetchErr } = await supabaseClient.from('game_rooms').select('*').eq('room_code', state.roomCode).single();
+            if (fetchErr || !room) {
+                showLoading(false); btn.disabled = false; return showToast("데이터 동기화 오류");
+            }
+
+            let gs = JSON.parse(room.current_theme || "{}");
             let myHand = parseBoard(state.myPlayerInfo.board_state);
             const maxHand = state.players.length === 1 ? 8 : (state.players.length === 2 ? 7 : 6);
             
-            showLoading(true);
-            
-            // 카드 보충
-            while (myHand.length < maxHand && gs.deck.length > 0) {
-                myHand.push(gs.deck.shift());
-            }
+            while (myHand.length < maxHand && gs.deck.length > 0) { myHand.push(gs.deck.shift()); }
             myHand.sort((a,b) => a-b);
 
             gs.cardsPlayedThisTurn = 0;
             gs.turnIndex += 1;
+            gs.stops = [false, false, false, false]; // 턴 넘길 때 모든 STOP 초기화
 
-            await Promise.all([
-                supabaseClient.from('game_players').update({ board_state: JSON.stringify(myHand) }).eq('room_code', state.roomCode).eq('user_id', state.user.id),
-                supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs) }).eq('room_code', state.roomCode)
-            ]);
+            const { error: updateErr } = await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs) }).eq('room_code', state.roomCode);
+            await supabaseClient.from('game_players').update({ board_state: JSON.stringify(myHand) }).eq('room_code', state.roomCode).eq('user_id', state.user.id);
+            
+            if (updateErr) {
+                showToast("턴을 넘기는 중 문제가 발생했습니다.");
+                btn.disabled = false;
+            }
             showLoading(false);
         }
 
-        function giveUp() {
-            openConfirmModal("더 이상 진행할 수 없습니까?\n게임이 즉시 패배로 종료됩니다.", async () => {
-                showLoading(true);
-                await supabaseClient.from('game_rooms').update({ status: 'revealed' }).eq('room_code', state.roomCode);
-                showLoading(false); closeConfirmModal();
-            });
+        // 💡 피드백 반영: 개별 셀 STOP 보류 기능 토글 로직
+        async function toggleStop(pileIdx) {
+            if (state.roomData.status !== 'playing') return;
+            let gs = JSON.parse(state.roomData.current_theme || "{}");
+            if(!gs.stops) gs.stops = [false, false, false, false];
+            gs.stops[pileIdx] = !gs.stops[pileIdx];
+            
+            state.roomData.current_theme = JSON.stringify(gs);
+            renderUI(); // 클릭 즉시 UI 반영
+            await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs) }).eq('room_code', state.roomCode);
         }
 
+        function giveUp() { openConfirmModal("더 이상 진행할 수 없습니까?\n게임이 즉시 패배로 종료됩니다.", async () => { showLoading(true); await supabaseClient.from('game_rooms').update({ status: 'revealed' }).eq('room_code', state.roomCode); showLoading(false); closeConfirmModal(); }); }
         function confirmRestartGame() { openConfirmModal("모든 데이터를 초기화하시겠습니까?\n(메모 로그 영구 삭제)", handleRestartGame); }
         async function handleRestartGame() {
             showLoading(true);
             await supabaseClient.from('game_rooms').update({ status: 'waiting', current_theme: '' }).eq('room_code', state.roomCode);
             await supabaseClient.from('game_players').update({ board_state: '[]', is_ready: false, selected_slot: null }).eq('room_code', state.roomCode);
             await supabaseClient.from('game_chat').delete().eq('room_code', state.roomCode);
-            localSelectedCard = null; document.getElementById('chat-messages').innerHTML = ''; showLoading(false); showToast("초기화 완료");
+            localSelectedCard = null; previousPiles = [1,1,100,100]; document.getElementById('chat-messages').innerHTML = ''; showLoading(false); showToast("초기화 완료");
         }
 
         async function handleChatSubmit(e) {
@@ -448,14 +492,15 @@
             await supabaseClient.from('game_chat').insert([{ room_code: state.roomCode, user_name: state.user.user_metadata.display_name, color: state.myPlayerInfo?.color || '#333', message: m }]);
         }
 
+        // 💡 피드백 반영: 긴급 소통용 디자인 제거하고 일반 형태 복구
         function appendChatMessage(c) {
             const box = document.getElementById('chat-messages'); const isMe = c.user_name === state.user.user_metadata.display_name;
             const d = document.createElement('div'); d.className = "flex flex-col mb-2";
-            d.innerHTML = `<div class="text-[9px] md:text-[10px] font-bold text-[#333] mb-0.5 flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full" style="background-color: ${c.color}"></div>${c.user_name} ${isMe ? '<span class="text-[#9aa0a6] font-normal">(나)</span>' : ''}</div><div class="chat-bubble bg-white px-2 py-1 text-[#333] shadow-sm">${c.message}</div>`;
+            const bubbleStyle = isMe ? 'bg-gray-800 text-white rounded-tr-none' : 'bg-white border border-[#e2e3e3] text-[#333] shadow-sm rounded-tl-none';
+            d.innerHTML = `<div class="text-[9px] md:text-[10px] font-bold text-[#333] mb-0.5 flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full" style="background-color: ${c.color}"></div>${c.user_name} ${isMe ? '<span class="text-[#9aa0a6] font-normal">(나)</span>' : ''}</div><div class="chat-bubble px-2 py-1 ${bubbleStyle} w-fit max-w-[85%] break-all text-xs md:text-sm">${c.message}</div>`;
             box.appendChild(d); box.scrollTop = box.scrollHeight;
         }
 
-        // 모달 및 관리 유틸
         function openMemberManage() { closeRoomManage(); const list = document.getElementById('member-manage-list'); list.innerHTML = state.players.map(p => `<div class="flex justify-between items-center py-2 border-b border-[#e2e3e3] last:border-0"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full" style="background-color: ${p.color}"></div><span class="text-[#333] font-medium">${p.user_name}</span></div>${p.user_id !== state.user.id ? `<button onclick="confirmKickMember('${p.user_id}', '${p.user_name}')" class="text-xs border border-[#ccc] px-2 py-1 hover:bg-[#f1f3f4]">제외</button>` : `<span class="text-xs text-[#9aa0a6]">관리자</span>`}</div>`).join(''); document.getElementById('modal-member-list').classList.remove('hidden'); }
         function closeMemberManage() { document.getElementById('modal-member-list').classList.add('hidden'); }
         function confirmKickMember(id, name) { openConfirmModal(`[${name}] 레코드를 제외하시겠습니까?\n프로세스가 재시작됩니다.`, () => handleKickMember(id)); }
