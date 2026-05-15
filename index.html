@@ -223,41 +223,72 @@
         }
 
         async function loadMyGames() {
-            // 1. 내가 참여한 플레이어 기록 가져오기 (가장 최근 참여순 정렬)
-            const { data: myPlayers, error } = await supabaseClient.from('game_players')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('id', { ascending: false });
+            try {
+                // 1. 내 플레이어 기록 가져오기
+                const { data: myPlayers, error } = await supabaseClient.from('game_players')
+                    .select('*')
+                    .eq('user_id', user.id);
 
-            const activeList = document.getElementById('my-game-list');
-            const historyList = document.getElementById('my-history-list');
+                const activeList = document.getElementById('my-game-list');
+                const historyList = document.getElementById('my-history-list');
 
-            // 참여 기록이 없거나 통신 에러 시 빈 목록 표시
-            if (error || !myPlayers || myPlayers.length === 0) {
-                activeList.innerHTML = `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-white border border-gray-200 rounded-xl">참여 중인 게임이 없습니다.</p>`;
-                historyList.innerHTML = `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-white border border-gray-200 rounded-xl">기록이 없습니다.</p>`;
-                return;
+                if (error || !myPlayers || myPlayers.length === 0) {
+                    activeList.innerHTML = `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-white border border-gray-200 rounded-xl">참여 중인 게임이 없습니다.</p>`;
+                    historyList.innerHTML = `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-white border border-gray-200 rounded-xl">기록이 없습니다.</p>`;
+                    return;
+                }
+
+                const roomCodes = [...new Set(myPlayers.map(p => p.room_code))];
+
+                // 2. 현재 존재하는 방 정보만 가져오기 (폭파된 방은 여기서 자연스럽게 제외됨)
+                const { data: rooms } = await supabaseClient.from('game_rooms')
+                    .select('*')
+                    .in('room_code', roomCodes);
+
+                if (!rooms || rooms.length === 0) {
+                    activeList.innerHTML = `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-white border border-gray-200 rounded-xl">참여 중인 게임이 없습니다.</p>`;
+                    historyList.innerHTML = `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-white border border-gray-200 rounded-xl">기록이 없습니다.</p>`;
+                    return;
+                }
+
+                // 3. 정렬을 위해 각 방의 최신 채팅(메모) 기록 가져오기
+                const validRoomCodes = rooms.map(r => r.room_code);
+                const { data: chats } = await supabaseClient.from('game_chat')
+                    .select('room_code, id')
+                    .in('room_code', validRoomCodes)
+                    .order('id', { ascending: false }); // 최신 채팅이 위로 오도록 가져옴
+
+                // 방별로 가장 높은(최신) chat id 매핑
+                const latestChatMap = {};
+                if (chats) {
+                    chats.forEach(c => {
+                        if (!latestChatMap[c.room_code]) latestChatMap[c.room_code] = c.id;
+                    });
+                }
+
+                // 4. 유효한 방만 필터링하고 채팅 최신순으로 정렬
+                let validData = myPlayers
+                    .map(p => {
+                        const roomInfo = rooms.find(r => r.room_code === p.room_code);
+                        // 방이 존재할 때만 데이터 유지, 폭파된 방은 null 처리되어 아래에서 삭제됨
+                        return roomInfo ? { ...p, game_rooms: roomInfo, latestChatId: latestChatMap[p.room_code] || 0 } : null;
+                    })
+                    .filter(item => item !== null);
+
+                // 💡 핵심 정렬 로직: 채팅 ID가 높은 것(최신)부터 내림차순 정렬. 채팅이 아예 없다면 방 입장 순서로 정렬
+                validData.sort((a, b) => b.latestChatId - a.latestChatId || b.id - a.id);
+
+                const activeData = validData.filter(i => i.is_active !== false);
+                const historyData = validData.filter(i => i.is_active === false);
+
+                activeList.innerHTML = activeData.length ? activeData.map(i => createGameListItem(i, true)).join('') : `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-white border border-gray-200 rounded-xl">참여 중인 게임이 없습니다.</p>`;
+                historyList.innerHTML = historyData.length ? historyData.map(i => createGameListItem(i, false)).join('') : `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-white border border-gray-200 rounded-xl">기록이 없습니다.</p>`;
+                
+            } catch (err) {
+                console.error("목록 렌더링 에러:", err);
+                showToast("목록을 구성하는 중 오류가 발생했습니다.");
             }
-
-            // 2. 방 코드(room_code)만 추출해서 방 정보 따로 가져오기 (DB 관계 설정 무관하게 100% 작동)
-            const roomCodes = myPlayers.map(p => p.room_code);
-            const { data: rooms } = await supabaseClient.from('game_rooms')
-                .select('*')
-                .in('room_code', roomCodes);
-
-            // 3. 자바스크립트에서 수동으로 데이터 합치기
-            const validData = myPlayers.map(p => {
-                const roomInfo = (rooms || []).find(r => r.room_code === p.room_code);
-                return { ...p, game_rooms: roomInfo || null };
-            }).filter(item => item.game_rooms !== null); // 방장이 방을 삭제(폭파)한 경우 제외
-
-            const activeData = validData.filter(i => i.is_active !== false);
-            const historyData = validData.filter(i => i.is_active === false);
-
-            activeList.innerHTML = activeData.length ? activeData.map(i => createGameListItem(i, true)).join('') : `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-white border border-gray-200 rounded-xl">참여 중인 게임이 없습니다.</p>`;
-            historyList.innerHTML = historyData.length ? historyData.map(i => createGameListItem(i, false)).join('') : `<p class="text-center py-6 text-xs text-gray-400 font-bold bg-white border border-gray-200 rounded-xl">기록이 없습니다.</p>`;
         }
-
 
         async function createRoom() {
             const name = document.getElementById('roomName').value.trim();
