@@ -317,7 +317,7 @@
 
         function openRoomManage() { document.getElementById('modal-room-manage').classList.remove('hidden'); }
         function closeRoomManage() { document.getElementById('modal-room-manage').classList.add('hidden'); }
-        async function handleShareRoom() { const t = `[공유 워크스페이스]\n시트: ${state.roomData.room_name}\n엑세스 키: ${state.roomCode}\n접속: ${window.location.origin}/mind.html?code=${state.roomCode}`; try { await copyToClipboard(t); } catch (e) {} closeRoomManage(); }
+        async function handleShareRoom() { const t = `[공유 워크스페이스]\n시트: ${state.roomData.room_name}\n엑세스 키: ${state.roomCode}\n접속: ${window.location.origin}/mannaja_gmroom/mind.html?code=${state.roomCode}`; try { await copyToClipboard(t); } catch (e) {} closeRoomManage(); }
         async function copyToClipboard(text) { if (navigator.clipboard && window.isSecureContext) { try { await navigator.clipboard.writeText(text); showToast("클립보드에 복사됨"); return; } catch (err) {} } const textArea = document.createElement("textarea"); textArea.value = text; textArea.style.position = "fixed"; textArea.style.left = "-9999px"; textArea.style.top = "0"; document.body.appendChild(textArea); textArea.focus(); textArea.select(); try { document.execCommand('copy'); showToast("클립보드에 복사됨"); } catch (err) { showToast("복사 실패"); } document.body.removeChild(textArea); }
         function openRenameModal() { closeRoomManage(); document.getElementById('renameInput').value = state.roomData.room_name; document.getElementById('modal-rename').classList.remove('hidden'); }
         function closeRenameModal() { document.getElementById('modal-rename').classList.add('hidden'); }
