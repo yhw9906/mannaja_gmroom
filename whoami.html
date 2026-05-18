@@ -138,7 +138,7 @@
             
             <div class="flex items-center gap-1.5 md:gap-2 pr-1 md:pr-2 py-1.5 flex-shrink-0">
                 <button id="btn-ready" onclick="toggleReady()" class="hidden bg-[#1a73e8] text-white border border-[#1557b0] px-3 md:px-4 py-1 hover:bg-[#1557b0] transition-colors whitespace-nowrap font-bold">참가 (Ready)</button>
-                <button id="btn-start" onclick="startGame()" class="hidden bg-[#0f9d58] text-white border border-[#0b8043] px-3 md:px-4 py-1 hover:bg-[#0b8043] whitespace-nowrap font-bold">매크로 실행 (Start)</button>
+                <button id="btn-start" onclick="startGame()" class="hidden bg-[#0f9d58] text-white border border-[#0b8043] px-3 md:px-4 py-1 hover:bg-[#0b8043] transition-colors whitespace-nowrap font-bold">매크로 실행 (Start)</button>
                 
                 <div id="assign-controls" class="hidden flex items-center gap-1.5">
                     <input type="text" id="assign-input" placeholder="타겟의 제시어 입력" class="w-32 md:w-40 px-2 py-1 bg-white border border-[#ccc] outline-none focus:border-[#f29900]">
@@ -237,7 +237,7 @@
             const { data: room } = await supabaseClient.from('game_rooms').select('*').eq('room_code', state.roomCode).single();
             if(!room) { alert("연결이 끊어졌습니다."); return goToLobby(); }
             
-            const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true).order('user_name');
+            const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true).order('id');
             const me = players.find(p => p.user_id === state.user.id);
             if (!me) { alert("세션에서 제외되었습니다."); supabaseClient.removeAllChannels(); return goToLobby(); }
 
@@ -328,18 +328,29 @@
             });
             document.getElementById('player-board-container').innerHTML = boardHTML;
 
-            const isAnyReady = state.players.length > 0 && state.players.some(p => p.is_ready);
-            const isHost = state.players.length > 0 && state.players[0].user_id === state.user.id;
-
+            // --- 💡 1. 누구나 버튼 제어 로직 💡 ---
             document.getElementById('btn-ready').classList.toggle('hidden', state.roomData.status !== 'waiting');
-            document.getElementById('btn-start').classList.toggle('hidden', state.roomData.status !== 'waiting' || !isAnyReady || !isHost);
-            
             const btnReady = document.getElementById('btn-ready');
             btnReady.innerText = state.myPlayerInfo?.is_ready ? "준비 취소" : "참가 (Ready)";
-            if(state.myPlayerInfo?.is_ready) { btnReady.classList.replace('bg-[#1a73e8]', 'bg-[#f1f3f4]'); btnReady.classList.replace('text-white', 'text-[#333]'); btnReady.classList.replace('border-[#1557b0]', 'border-[#ccc]'); } 
-            else { btnReady.classList.replace('bg-[#f1f3f4]', 'bg-[#1a73e8]'); btnReady.classList.replace('text-[#333]', 'text-white'); btnReady.classList.replace('border-[#ccc]', 'border-[#1557b0]'); }
+            if(state.myPlayerInfo?.is_ready) { 
+                btnReady.classList.replace('bg-[#1a73e8]', 'bg-[#f1f3f4]'); btnReady.classList.replace('text-white', 'text-[#333]'); btnReady.classList.replace('border-[#1557b0]', 'border-[#ccc]'); 
+            } else { 
+                btnReady.classList.replace('bg-[#f1f3f4]', 'bg-[#1a73e8]'); btnReady.classList.replace('text-[#333]', 'text-white'); btnReady.classList.replace('border-[#ccc]', 'border-[#1557b0]'); 
+            }
 
-            const showAssign = state.roomData.status === 'playing' && gs.stage === 'assign' && !isMyAssignTurn;
+            const btnStart = document.getElementById('btn-start');
+            btnStart.classList.toggle('hidden', state.roomData.status !== 'waiting');
+            
+            // 내가 '참가' 상태일 때만 Start 버튼 활성화 (아니면 클릭 불가)
+            if (state.myPlayerInfo?.is_ready) {
+                btnStart.disabled = false;
+                btnStart.classList.remove('opacity-40', 'cursor-not-allowed');
+            } else {
+                btnStart.disabled = true;
+                btnStart.classList.add('opacity-40', 'cursor-not-allowed');
+            }
+
+            const showAssign = state.roomData.status === 'playing' && gs.stage === 'assign' && (!isMyAssignTurn || state.players.length === 1);
             document.getElementById('assign-controls').classList.toggle('hidden', !showAssign);
             if (showAssign) {
                 document.getElementById('assign-input').placeholder = `[${assignTargetPlayer.user_name}]의 제시어`;
@@ -362,24 +373,35 @@
             document.getElementById('btn-ready').disabled = false;
         }
 
+        // --- 💡 2. 게임 시작 로직 (누구나 클릭 가능) 💡 ---
         async function startGame() {
             const btnStart = document.getElementById('btn-start'); btnStart.disabled = true; showLoading(true);
             
-            const readyPlayers = state.players.filter(p => p.is_ready);
+            const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true).order('id');
+            const readyPlayers = players.filter(p => p.is_ready);
+            
             if (readyPlayers.length < 1) { 
                 showLoading(false); btnStart.disabled = false; 
                 return showToast("최소 1명 이상의 참가자가 필요합니다."); 
             }
 
+            // 내가 준비 안된 상태에서 편법으로 Start를 누르는 것을 방어
+            const me = players.find(p => p.user_id === state.user.id);
+            if (!me.is_ready) {
+                showLoading(false); btnStart.disabled = false;
+                return showToast("본인이 먼저 참가(Ready)를 눌러야 시작할 수 있습니다.");
+            }
+
             const gs = { stage: 'assign', assignIdx: 0, turnIdx: 0 };
             const initBoard = JSON.stringify({ keyword: "", guessed: false });
 
-            // 💡 참가를 누르지 않은 플레이어는 이번 세션에서 자동 강퇴 처리
-            const unreadyPlayers = state.players.filter(p => !p.is_ready);
+            // 참가를 누르지 않은 플레이어는 이번 세션에서 자동 강퇴(is_active: false) 처리
+            const unreadyPlayers = players.filter(p => !p.is_ready);
             for(let p of unreadyPlayers) {
                 await supabaseClient.from('game_players').update({ is_active: false, is_ready: false, board_state: initBoard }).eq('room_code', state.roomCode).eq('user_id', p.user_id);
             }
 
+            // 참가자들 상태 초기화
             for(let p of readyPlayers) {
                 await supabaseClient.from('game_players').update({ board_state: initBoard, is_ready: false }).eq('room_code', state.roomCode).eq('user_id', p.user_id);
             }
@@ -445,7 +467,7 @@
             if (isCorrect) {
                 myBoard.guessed = true;
                 await supabaseClient.from('game_players').update({ board_state: JSON.stringify(myBoard) }).eq('room_code', state.roomCode).eq('user_id', state.user.id);
-                await supabaseClient.from('game_chat').insert([{ room_code: state.roomCode, user_name: "SYSTEM", color: "#0f9d58", message: `[${state.myPlayerInfo.user_name}] 정답을 맞혔습니다! (제시어: ${myBoard.keyword})` }]);
+                await supabaseClient.from('game_chat').insert([{ room_code: state.roomCode, user_name: "SYSTEM", color: "#0f9d58", message: `🎉 [${state.myPlayerInfo.user_name}] 정답을 맞혔습니다! (제시어: ${myBoard.keyword})` }]);
                 closeGuessModal();
                 showToast("정답입니다!");
 
