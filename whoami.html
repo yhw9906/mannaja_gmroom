@@ -115,21 +115,21 @@
                 <div id="player-board-container" class="flex-col w-full text-[11px] md:text-[13px]"></div>
             </div>
 
-            <div class="h-1/3 md:h-full w-full md:w-72 bg-white flex flex-col flex-shrink-0 border-t md:border-t-0 border-[#e2e3e3] relative">
+            <div class="h-[45%] md:h-full w-full md:w-80 bg-white flex flex-col flex-shrink-0 border-t md:border-t-0 border-[#e2e3e3] relative">
                 <div class="p-1.5 md:p-2 border-b border-[#e2e3e3] bg-[#f8f9fa] text-[10px] md:text-[11px] text-[#5f6368] font-medium flex justify-between items-center">
                     <span>메모 이력 (Log)</span>
                 </div>
                 <div id="chat-messages" class="flex-1 overflow-y-auto p-2 md:p-3 space-y-2 bg-white text-[10px] md:text-[11px]"></div>
                 <div class="p-1.5 md:p-2 border-t border-[#e2e3e3] bg-[#f8f9fa]">
                     <form onsubmit="handleChatSubmit(event)" class="flex gap-1.5 md:gap-2 m-0">
-                        <input type="text" id="chat-input" placeholder="메모 추가..." autocomplete="off" class="flex-1 px-2 py-1 bg-white border border-[#ccc] outline-none focus:border-[#1a73e8] text-[10px] md:text-[11px]">
-                        <button type="submit" class="bg-[#f1f3f4] text-[#333] border border-[#ccc] px-2 md:px-3 py-1 text-[10px] md:text-[11px] hover:bg-[#e8eaed] whitespace-nowrap">입력</button>
+                        <input type="text" id="chat-input" placeholder="메모 추가..." autocomplete="off" class="flex-1 px-2 py-1 bg-white border border-[#ccc] outline-none focus:border-[#333] text-[10px] md:text-[11px]">
+                        <button type="submit" class="bg-[#f1f3f4] text-[#333] border border-[#ccc] px-2 md:px-3 py-1 text-[10px] md:text-[11px] hover:bg-[#e8eaed] whitespace-nowrap font-bold">입력</button>
                     </form>
                 </div>
 
                 <div id="chat-blind" class="hidden absolute inset-0 bg-white/95 z-50 flex flex-col items-center justify-center p-4 text-center border-l border-[#e2e3e3]">
-                    <span class="text-4xl mb-2">🙈</span>
-                    <span class="text-[#c5221f] font-black text-sm mb-1">통신 차단됨</span>
+                    <span class="text-3xl mb-2">🔒</span>
+                    <span class="text-[#333] font-black text-sm mb-1">통신 차단됨</span>
                     <span class="text-[#5f6368] text-[11px] break-keep">다른 플레이어들이 당신의 제시어를 정하고 있습니다.</span>
                 </div>
             </div>
@@ -138,21 +138,21 @@
         <div class="bg-[#f8f9fa] border-t border-[#e2e3e3] flex items-center justify-between px-2 flex-shrink-0 text-[10px] md:text-[11px] overflow-x-auto no-scrollbar" style="padding-bottom: env(safe-area-inset-bottom);">
             <div class="flex items-center flex-shrink-0">
                 <div class="px-2 py-1.5 text-[#5f6368] border-r border-[#e2e3e3] font-bold cursor-pointer hover:bg-[#e8eaed]" title="로비로 나가기" onclick="goToLobby()">◀</div>
-                <div class="bg-white text-[#1a73e8] font-bold px-3 md:px-4 py-1.5 border-r border-t border-l border-[#e2e3e3] shadow-[0_-1px_0_#1a73e8] cursor-pointer whitespace-nowrap">WHOAMI_DB</div>
+                <div class="bg-white text-[#333] font-bold px-3 md:px-4 py-1.5 border-r border-t border-l border-[#e2e3e3] shadow-[0_-1px_0_#333] cursor-pointer whitespace-nowrap">WHOAMI_DB</div>
                 <div class="text-[#5f6368] px-3 md:px-4 py-1.5 hover:bg-[#e8eaed] cursor-pointer whitespace-nowrap" onclick="confirmRestartGame()">초기화</div>
             </div>
             
             <div class="flex items-center gap-1.5 md:gap-2 pr-1 md:pr-2 py-1.5 flex-shrink-0">
-                <button id="btn-ready" onclick="toggleReady()" class="hidden bg-[#1a73e8] text-white border border-[#1557b0] px-3 md:px-4 py-1 hover:bg-[#1557b0] transition-colors whitespace-nowrap font-bold">참가 (Ready)</button>
-                <button id="btn-start" onclick="startGame()" class="hidden bg-[#0f9d58] text-white border border-[#0b8043] px-3 md:px-4 py-1 hover:bg-[#0b8043] transition-colors whitespace-nowrap font-bold">매크로 실행 (Start)</button>
+                <button id="btn-ready" onclick="toggleReady()" class="hidden bg-white text-[#333] border border-[#ccc] px-3 md:px-4 py-1 hover:bg-[#f1f3f4] transition-colors whitespace-nowrap font-bold shadow-sm">참가 (Ready)</button>
+                <button id="btn-start" onclick="startGame()" class="hidden bg-[#333] text-white border border-[#333] px-3 md:px-4 py-1 hover:bg-black transition-colors whitespace-nowrap font-bold shadow-sm">매크로 실행 (Start)</button>
                 
                 <div id="assign-controls" class="hidden flex items-center gap-1.5">
-                    <input type="text" id="assign-input" placeholder="타겟의 제시어 입력" class="w-32 md:w-40 px-2 py-1 bg-white border border-[#ccc] outline-none focus:border-[#f29900]">
-                    <button onclick="submitKeyword()" class="bg-[#f29900] text-white border border-[#c77e00] px-3 py-1 hover:bg-[#c77e00] transition-colors font-bold whitespace-nowrap">제시어 확정</button>
+                    <input type="text" id="assign-input" placeholder="타겟의 제시어 입력" class="w-32 md:w-40 px-2 py-1 bg-white border border-[#ccc] outline-none focus:border-[#333]">
+                    <button onclick="submitKeyword()" class="bg-[#5f6368] text-white border border-[#5f6368] px-3 py-1 hover:bg-[#333] transition-colors font-bold whitespace-nowrap shadow-sm">제시어 확정</button>
                 </div>
 
-                <button id="btn-guess" onclick="openGuessModal()" class="hidden bg-[#ea4335] text-white border border-[#b31412] px-3 md:px-4 py-1 hover:bg-[#c5221f] transition-colors whitespace-nowrap font-black shadow-sm">🎯 정답 맞히기</button>
-                <button id="btn-end-turn" onclick="endTurn()" class="hidden bg-[#1a73e8] text-white border border-[#1557b0] px-3 md:px-4 py-1 hover:bg-[#1557b0] disabled:opacity-40 disabled:bg-[#f1f3f4] disabled:text-[#999] disabled:border-[#ccc] transition-colors whitespace-nowrap font-bold">질문 완료 (턴 넘기기)</button>
+                <button id="btn-guess" onclick="openGuessModal()" class="hidden bg-white text-[#333] border border-[#ccc] px-3 md:px-4 py-1 hover:bg-[#f1f3f4] transition-colors whitespace-nowrap font-black shadow-sm">🎯 정답 맞히기</button>
+                <button id="btn-end-turn" onclick="endTurn()" class="hidden bg-[#333] text-white border border-[#333] px-3 md:px-4 py-1 hover:bg-black disabled:opacity-40 disabled:bg-[#f1f3f4] disabled:text-[#999] disabled:border-[#ccc] transition-colors whitespace-nowrap font-bold shadow-sm">질문 완료 (턴 넘기기)</button>
             </div>
         </div>
     </div>
@@ -465,11 +465,9 @@
             const { data: room } = await supabaseClient.from('game_rooms').select('current_theme').eq('room_code', state.roomCode).single();
             let gs = JSON.parse(room.current_theme || "{}");
             
-            // 💡 픽스: 관전자를 제외하고 게임 진행
-            const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true);
-            const playingPlayers = (players || []).filter(p => !parseBoard(p.board_state).spectator);
+            // 💡 픽스: DB 재호출 대신 기존에 정렬되어 있는 state.players 배열을 활용하여 순서 꼬임 방지
+            const playingPlayers = state.players.filter(p => !parseBoard(p.board_state).spectator);
             const pLen = Math.max(playingPlayers.length, 1);
-
             const targetPlayer = playingPlayers[gs.assignIdx % pLen];
             
             if (targetPlayer) {
@@ -495,8 +493,8 @@
             const { data: room } = await supabaseClient.from('game_rooms').select('current_theme').eq('room_code', state.roomCode).single();
             let gs = JSON.parse(room.current_theme || "{}");
             
-            const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true);
-            const playingPlayers = (players || []).filter(p => !parseBoard(p.board_state).spectator);
+            // 💡 픽스: 여기도 동일하게 state.players 기반으로 턴 계산
+            const playingPlayers = state.players.filter(p => !parseBoard(p.board_state).spectator);
             const pLen = Math.max(playingPlayers.length, 1);
             
             do {
@@ -555,19 +553,38 @@
 
         async function handleChatSubmit(e) {
             e.preventDefault(); const i = document.getElementById('chat-input'); const m = i.value.trim(); if(!m) return; i.value = ""; i.focus();
-            await supabaseClient.from('game_chat').insert([{ room_code: state.roomCode, user_name: state.user.user_metadata.display_name, color: state.myPlayerInfo?.color || '#333', message: m }]);
+            
+            // 💡 픽스: 내가 타겟일 때 다른 사람들이 적는 채팅은 [SPOIL:내ID] 태그를 달아서 보냄
+            let prefix = "";
+            let gs = JSON.parse(state.roomData?.current_theme || "{}");
+            if (state.roomData?.status === 'playing' && gs.stage === 'assign') {
+                const playingPlayers = state.players.filter(p => !parseBoard(p.board_state).spectator);
+                const targetPlayer = playingPlayers[gs.assignIdx % Math.max(playingPlayers.length, 1)];
+                if (targetPlayer) prefix = `[SPOIL:${targetPlayer.user_id}]`;
+            }
+            
+            await supabaseClient.from('game_chat').insert([{ room_code: state.roomCode, user_name: state.user.user_metadata.display_name, color: state.myPlayerInfo?.color || '#333', message: prefix + m }]);
         }
 
         function appendChatMessage(c) {
+            let msg = c.message;
+            // 💡 픽스: 스포일러 렌더링 원천 차단
+            const spoilMatch = msg.match(/^\[SPOIL:(.+?)\]/);
+            if (spoilMatch) {
+                if (spoilMatch[1] === state.user.id) return; // 내 제시어 정하는 중인 채팅이면 화면에 절대 안 띄움
+                msg = msg.replace(/^\[SPOIL:.+?\]/, ''); // 남의 제시어면 태그만 깔끔하게 지우고 출력
+            }
+
             const box = document.getElementById('chat-messages'); const isMe = c.user_name === state.user.user_metadata.display_name;
             const isSystem = c.user_name === "SYSTEM";
             const d = document.createElement('div'); d.className = "flex flex-col mb-2";
             
             if (isSystem) {
-                d.innerHTML = `<div class="text-[9px] md:text-[10px] font-black text-[#5f6368] mb-0.5 flex justify-center w-full bg-[#f1f3f4] py-1 rounded-sm">${c.message}</div>`;
+                d.innerHTML = `<div class="text-[9px] md:text-[10px] font-black text-[#5f6368] mb-0.5 flex justify-center w-full bg-[#f1f3f4] py-1 rounded-sm">${msg}</div>`;
             } else {
-                const bubbleStyle = isMe ? 'bg-gray-800 text-white rounded-tr-none' : 'bg-white border border-[#e2e3e3] text-[#333] shadow-sm rounded-tl-none';
-                d.innerHTML = `<div class="text-[9px] md:text-[10px] font-bold text-[#333] mb-0.5 flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full" style="background-color: ${c.color}"></div>${c.user_name} ${isMe ? '<span class="text-[#9aa0a6] font-normal">(나)</span>' : ''}</div><div class="chat-bubble px-2 py-1 ${bubbleStyle} w-fit max-w-[85%] break-all text-xs md:text-sm">${c.message}</div>`;
+                // 채팅 말풍선도 엑셀스럽게 무채색 변경
+                const bubbleStyle = isMe ? 'bg-[#333] text-white rounded-tr-none' : 'bg-white border border-[#ccc] text-[#333] shadow-sm rounded-tl-none border-l-2 border-l-[#5f6368]';
+                d.innerHTML = `<div class="text-[9px] md:text-[10px] font-bold text-[#333] mb-0.5 flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full" style="background-color: ${c.color}"></div>${c.user_name} ${isMe ? '<span class="text-[#9aa0a6] font-normal">(나)</span>' : ''}</div><div class="chat-bubble px-2 py-1 ${bubbleStyle} w-fit max-w-[85%] break-all text-xs md:text-sm">${msg}</div>`;
             }
             box.appendChild(d); box.scrollTop = box.scrollHeight;
         }
