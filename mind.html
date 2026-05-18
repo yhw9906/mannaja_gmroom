@@ -369,6 +369,16 @@
             try { if (isMobile && navigator.share) { await navigator.share({ text: t }); } else { await copyToClipboard(t); } } catch (e) { await copyToClipboard(t); } 
             closeRoomManage(); 
         }
+
+        function confirmLeaveRoom() { 
+            closeRoomManage(); 
+            openConfirmModal("방에서 완전히 나가시겠습니까?\n(진행 중인 프로세스가 초기화됩니다.)", async () => { 
+                showLoading(true); 
+                await supabaseClient.from('game_players').update({ is_active: false, selected_slot: null, secret_number: null, is_ready: false, board_state: '[]' }).eq('room_code', state.roomCode).eq('user_id', state.user.id); 
+                await handleRestartGame(); 
+                goToLobby(); 
+            }); 
+        }
         
         async function copyToClipboard(text) { if (navigator.clipboard && window.isSecureContext) { try { await navigator.clipboard.writeText(text); showToast("클립보드에 복사됨"); return; } catch (err) {} } const textArea = document.createElement("textarea"); textArea.value = text; textArea.style.position = "fixed"; textArea.style.left = "-9999px"; textArea.style.top = "0"; document.body.appendChild(textArea); textArea.focus(); textArea.select(); try { document.execCommand('copy'); showToast("클립보드에 복사됨"); } catch (err) { showToast("복사 실패"); } document.body.removeChild(textArea); }
         function openRenameModal() { closeRoomManage(); document.getElementById('renameInput').value = state.roomData.room_name; document.getElementById('modal-rename').classList.remove('hidden'); }
