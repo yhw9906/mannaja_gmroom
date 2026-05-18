@@ -442,6 +442,16 @@
             box.appendChild(d); box.scrollTop = box.scrollHeight;
         }
 
+        function confirmLeaveRoom() { 
+            closeRoomManage(); 
+            openConfirmModal("방에서 완전히 나가시겠습니까?\n(진행 중인 프로세스가 초기화됩니다.)", async () => { 
+                showLoading(true); 
+                await supabaseClient.from('game_players').update({ is_active: false, selected_slot: null, secret_number: null, is_ready: false, board_state: '[]' }).eq('room_code', state.roomCode).eq('user_id', state.user.id); 
+                await handleRestartGame(); 
+                goToLobby(); 
+            }); 
+        }
+        
         function openMemberManage() { closeRoomManage(); const list = document.getElementById('member-manage-list'); list.innerHTML = state.players.map(p => `<div class="flex justify-between items-center py-2 border-b border-[#e2e3e3] last:border-0"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full" style="background-color: ${p.color}"></div><span class="text-[#333] font-medium">${p.user_name}</span></div>${p.user_id !== state.user.id ? `<button onclick="confirmKickMember('${p.user_id}', '${p.user_name}')" class="text-xs border border-[#ccc] px-2 py-1 hover:bg-[#f1f3f4]">제외</button>` : `<span class="text-xs text-[#9aa0a6]">관리자</span>`}</div>`).join(''); document.getElementById('modal-member-list').classList.remove('hidden'); }
         function closeMemberManage() { document.getElementById('modal-member-list').classList.add('hidden'); }
         function confirmKickMember(id, name) { openConfirmModal(`[${name}] 레코드를 제외하시겠습니까?\n프로세스가 재시작됩니다.`, () => handleKickMember(id)); }
