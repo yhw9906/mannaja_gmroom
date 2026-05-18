@@ -115,7 +115,7 @@
                 <div id="player-board-container" class="flex-col w-full text-[11px] md:text-[13px]"></div>
             </div>
 
-            <div class="h-1/3 md:h-full w-full md:w-72 bg-white flex flex-col flex-shrink-0 border-t md:border-t-0 border-[#e2e3e3]">
+            <div class="h-1/3 md:h-full w-full md:w-72 bg-white flex flex-col flex-shrink-0 border-t md:border-t-0 border-[#e2e3e3] relative">
                 <div class="p-1.5 md:p-2 border-b border-[#e2e3e3] bg-[#f8f9fa] text-[10px] md:text-[11px] text-[#5f6368] font-medium flex justify-between items-center">
                     <span>메모 이력 (Log)</span>
                 </div>
@@ -125,6 +125,12 @@
                         <input type="text" id="chat-input" placeholder="메모 추가..." autocomplete="off" class="flex-1 px-2 py-1 bg-white border border-[#ccc] outline-none focus:border-[#1a73e8] text-[10px] md:text-[11px]">
                         <button type="submit" class="bg-[#f1f3f4] text-[#333] border border-[#ccc] px-2 md:px-3 py-1 text-[10px] md:text-[11px] hover:bg-[#e8eaed] whitespace-nowrap">입력</button>
                     </form>
+                </div>
+
+                <div id="chat-blind" class="hidden absolute inset-0 bg-white/95 z-50 flex flex-col items-center justify-center p-4 text-center border-l border-[#e2e3e3]">
+                    <span class="text-4xl mb-2">🙈</span>
+                    <span class="text-[#c5221f] font-black text-sm mb-1">통신 차단됨</span>
+                    <span class="text-[#5f6368] text-[11px] break-keep">다른 플레이어들이 당신의 제시어를 정하고 있습니다.</span>
                 </div>
             </div>
         </div>
@@ -167,15 +173,15 @@
         function openGuessModal() { document.getElementById('guessInput').value = ""; document.getElementById('modal-guess').classList.remove('hidden'); setTimeout(() => document.getElementById('guessInput').focus(), 100); }
         function closeGuessModal() { document.getElementById('modal-guess').classList.add('hidden'); }
 
-        // 데이터 파싱 에러 방지 강화를 위한 방어 로직 추가
+        // 💡 픽스: 관전자(spectator) 상태 관리 포함
         function parseBoard(raw) {
-            const defaultBoard = { keyword: "", guessed: false };
+            const defaultBoard = { keyword: "", guessed: false, spectator: false };
             if (!raw) return defaultBoard;
-            if (typeof raw === 'object' && !Array.isArray(raw)) return raw;
+            if (typeof raw === 'object' && !Array.isArray(raw)) return Object.assign({}, defaultBoard, raw);
             if (typeof raw === 'string') { 
                 try { 
                     let parsed = JSON.parse(raw); 
-                    return (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) ? parsed : defaultBoard; 
+                    return (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) ? Object.assign({}, defaultBoard, parsed) : defaultBoard; 
                 } catch(e) { return defaultBoard; } 
             }
             return defaultBoard;
@@ -211,7 +217,7 @@
 
         async function selectColor(color) {
             showLoading(true);
-            const initBoard = JSON.stringify({ keyword: "", guessed: false });
+            const initBoard = JSON.stringify({ keyword: "", guessed: false, spectator: false });
             const { error } = await supabaseClient.from('game_players').insert([{ room_code: state.roomCode, user_id: state.user.id, user_name: state.user.user_metadata.display_name, color: color, is_active: true, board_state: initBoard }]);
             showLoading(false);
             if(error) return showToast("오류 발생");
@@ -236,7 +242,6 @@
 
         async function loadChatHistory(code) {
             try {
-                // 💡 통신 멈춤을 막기 위해 안전장치 추가
                 const { data } = await supabaseClient.from('game_chat').select('*').eq('room_code', code).order('id', { ascending: true }).catch(() => ({ data: [] }));
                 const box = document.getElementById('chat-messages'); box.innerHTML = '';
                 const chatData = data || [];
@@ -249,7 +254,6 @@
                 const { data: room } = await supabaseClient.from('game_rooms').select('*').eq('room_code', state.roomCode).single();
                 if(!room) { alert("연결이 끊어졌습니다."); return goToLobby(); }
                 
-                // 💡 치명적 버그 수정: .order('id') 삭제 (해당 컬럼이 없는 테이블 설정에서의 멈춤 방지) 및 기본 배열([]) 할당
                 const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true).order('user_name');
                 const activePlayers = players || [];
                 
@@ -264,7 +268,7 @@
         }
 
         function renderUI() {
-            if (!state.roomData || !state.players) return; // 화면 그리기 전 안전성 체크
+            if (!state.roomData || !state.players) return; 
             
             document.getElementById('room-info-display').innerText = `[공유] ${state.roomData.room_name} (ID: ${state.roomCode})`;
             
@@ -273,12 +277,16 @@
                 try { gs = JSON.parse(state.roomData.current_theme || "{}"); } catch(e) {} 
             }
 
-            const pLen = Math.max(state.players.length, 1); // 0으로 나누기 에러 방지
-            const activePlayer = gs.stage === 'play' ? state.players[gs.turnIdx % pLen] : null;
-            const assignTargetPlayer = gs.stage === 'assign' ? state.players[gs.assignIdx % pLen] : null;
+            // 💡 픽스: 플레이 중인 인원(관전자 제외)만 추려서 턴/제시어 대상자로 산정합니다.
+            const playingPlayers = state.players.filter(p => !parseBoard(p.board_state).spectator);
+            const pLen = Math.max(playingPlayers.length, 1);
+            
+            const activePlayer = gs.stage === 'play' ? playingPlayers[gs.turnIdx % pLen] : null;
+            const assignTargetPlayer = gs.stage === 'assign' ? playingPlayers[gs.assignIdx % pLen] : null;
             
             const isMyTurn = (state.roomData.status === 'playing' && gs.stage === 'play') && (activePlayer?.user_id === state.user.id);
             const isMyAssignTurn = (state.roomData.status === 'playing' && gs.stage === 'assign') && (assignTargetPlayer?.user_id === state.user.id);
+            const iAmSpectator = parseBoard(state.myPlayerInfo.board_state).spectator;
 
             let displayMsg = "#WAITING_FOR_MACRO";
             let displayThemeEl = document.getElementById('display-theme');
@@ -293,7 +301,8 @@
             } else if (state.roomData.status === 'playing') {
                 if (gs.stage === 'assign') {
                     displayMsg = `=ASSIGN_KEYWORD(Target: "${assignTargetPlayer?.user_name || '알 수 없음'}")`;
-                    if (isMyAssignTurn) displayThemeEl.classList.add('bg-[#fce8e6]', 'text-[#c5221f]'); 
+                    if (iAmSpectator) displayThemeEl.classList.add('text-[#5f6368]');
+                    else if (isMyAssignTurn) displayThemeEl.classList.add('bg-[#fce8e6]', 'text-[#c5221f]'); 
                     else displayThemeEl.classList.add('bg-[#fef7e0]', 'text-[#f29900]');
                 } else if (gs.stage === 'play') {
                     displayMsg = `=TURN(Active: "${activePlayer?.user_name || '알 수 없음'}", Status: "질문 진행 중")`;
@@ -312,31 +321,37 @@
                 let nameHtml = `<div class="flex items-center gap-1.5 truncate"><div class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: ${p.color}"></div><span class="truncate font-bold ${p.user_id === state.user.id ? 'text-[#1a73e8]' : 'text-[#333]'}">${p.user_name}</span></div>`;
 
                 let keywordHtml = "";
+                let statusHtml = "";
+
                 if (state.roomData.status === 'waiting') {
+                    statusHtml = p.is_ready ? `<span class="text-[#0f9d58] font-bold">준비 완료</span>` : `<span class="text-[#f29900]">대기 중</span>`;
                     keywordHtml = `<span class="text-[#ccc] italic">대기 중...</span>`;
+                } else if (pData.spectator) {
+                    statusHtml = `<span class="text-[#9aa0a6] font-bold">관전 중</span>`;
+                    keywordHtml = `<span class="text-[#ccc] italic">-</span>`;
                 } else if (pData.guessed || state.roomData.status === 'revealed') {
+                    statusHtml = `<span class="text-[#0f9d58] font-black">✔ 정답 판명</span>`;
                     keywordHtml = `<span class="text-[#0f9d58] font-black tracking-widest bg-[#e6f4ea] px-2 py-0.5 rounded shadow-sm">${pData.keyword}</span>`;
-                } else if (p.user_id === state.user.id) {
-                    keywordHtml = `<span class="text-[#c5221f] font-black tracking-[0.2em] text-lg bg-[#fce8e6] px-3 py-0.5 rounded border border-[#f2bdb9]">???</span>`;
-                } else {
-                    keywordHtml = `
+                } else if (gs.stage === 'assign') {
+                    if (assignTargetPlayer?.user_id === p.user_id) statusHtml = `<span class="text-[#f29900] font-bold animate-pulse">제시어 릴레이 중...</span>`;
+                    else statusHtml = pData.keyword ? `<span class="text-[#5f6368]">입력 완료</span>` : `<span class="text-[#ccc]">대기</span>`;
+                    
+                    if (p.user_id === state.user.id) keywordHtml = `<span class="text-[#333] font-bold">?</span>`;
+                    else keywordHtml = `
                         <div class="relative flex items-center justify-center w-full h-full cursor-pointer group" onpointerdown="this.children[1].classList.remove('hidden'); this.children[0].classList.add('hidden')" onpointerup="this.children[1].classList.add('hidden'); this.children[0].classList.remove('hidden')" onpointerleave="this.children[1].classList.add('hidden'); this.children[0].classList.remove('hidden')" oncontextmenu="event.preventDefault();" style="touch-action: none; -webkit-user-select: none; user-select: none;">
                             <span class="text-[#9aa0a6] bg-[#f1f3f4] px-3 py-1 text-[10px] md:text-xs font-bold border border-[#ccc] group-hover:bg-[#e8eaed] transition-colors rounded-sm">조회</span>
                             <span class="hidden text-[#333] font-black text-sm md:text-base tracking-wider absolute inset-0 bg-white flex items-center justify-center border-2 border-[#1a73e8] z-10 shadow-lg">${pData.keyword || '(미정)'}</span>
                         </div>`;
-                }
-
-                let statusHtml = "";
-                if (state.roomData.status === 'waiting') {
-                    statusHtml = p.is_ready ? `<span class="text-[#0f9d58] font-bold">준비 완료</span>` : `<span class="text-[#f29900]">대기 중</span>`;
-                } else if (pData.guessed || state.roomData.status === 'revealed') {
-                    statusHtml = `<span class="text-[#0f9d58] font-black">✔ 정답 판명</span>`;
-                } else if (gs.stage === 'assign') {
-                    if (assignTargetPlayer?.user_id === p.user_id) statusHtml = `<span class="text-[#f29900] font-bold animate-pulse">제시어 릴레이 중...</span>`;
-                    else statusHtml = pData.keyword ? `<span class="text-[#5f6368]">입력 완료</span>` : `<span class="text-[#ccc]">대기</span>`;
                 } else if (gs.stage === 'play') {
                     if (activePlayer?.user_id === p.user_id) statusHtml = `<span class="text-[#1a73e8] font-black">▶ 질문 중</span>`;
                     else statusHtml = `<span class="text-[#5f6368]">고민 중</span>`;
+                    
+                    if (p.user_id === state.user.id) keywordHtml = `<span class="text-[#333] font-bold">?</span>`;
+                    else keywordHtml = `
+                        <div class="relative flex items-center justify-center w-full h-full cursor-pointer group" onpointerdown="this.children[1].classList.remove('hidden'); this.children[0].classList.add('hidden')" onpointerup="this.children[1].classList.add('hidden'); this.children[0].classList.remove('hidden')" onpointerleave="this.children[1].classList.add('hidden'); this.children[0].classList.remove('hidden')" oncontextmenu="event.preventDefault();" style="touch-action: none; -webkit-user-select: none; user-select: none;">
+                            <span class="text-[#9aa0a6] bg-[#f1f3f4] px-3 py-1 text-[10px] md:text-xs font-bold border border-[#ccc] group-hover:bg-[#e8eaed] transition-colors rounded-sm">조회</span>
+                            <span class="hidden text-[#333] font-black text-sm md:text-base tracking-wider absolute inset-0 bg-white flex items-center justify-center border-2 border-[#1a73e8] z-10 shadow-lg">${pData.keyword || '(미정)'}</span>
+                        </div>`;
                 }
 
                 boardHTML += `
@@ -375,13 +390,14 @@
                 btnStart.classList.add('opacity-40', 'cursor-not-allowed');
             }
 
-            const showAssign = state.roomData.status === 'playing' && gs.stage === 'assign' && (!isMyAssignTurn || state.players.length === 1);
+            
+            const showAssign = state.roomData.status === 'playing' && gs.stage === 'assign' && (!isMyAssignTurn || playingPlayers.length === 1);
             document.getElementById('assign-controls').classList.toggle('hidden', !showAssign);
             if (showAssign && assignTargetPlayer) {
                 document.getElementById('assign-input').placeholder = `[${assignTargetPlayer.user_name}]의 제시어`;
             }
 
-            const showPlayBtns = state.roomData.status === 'playing' && gs.stage === 'play';
+            const showPlayBtns = state.roomData.status === 'playing' && gs.stage === 'play' && !iAmSpectator;
             const iAmGuessed = parseBoard(state.myPlayerInfo.board_state).guessed;
             
             document.getElementById('btn-guess').classList.toggle('hidden', !showPlayBtns || iAmGuessed);
@@ -390,6 +406,12 @@
             const btnEndTurn = document.getElementById('btn-end-turn');
             btnEndTurn.disabled = !isMyTurn;
             btnEndTurn.innerText = isMyTurn ? "질문 완료 (턴 넘기기)" : "상대방 턴 진행중";
+
+            // 💡 내 제시어를 정할 때 채팅 블라인드
+            const chatBlind = document.getElementById('chat-blind');
+            if (chatBlind) {
+                chatBlind.classList.toggle('hidden', !isMyAssignTurn);
+            }
         }
 
         async function toggleReady() { 
@@ -401,8 +423,7 @@
         async function startGame() {
             const btnStart = document.getElementById('btn-start'); btnStart.disabled = true; showLoading(true);
             
-            // 모든 쿼리에서 .order('id') 제거 (에러 방지)
-            const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true).order('user_name');
+            const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true);
             const activePlayers = players || [];
             const readyPlayers = activePlayers.filter(p => p.is_ready);
             
@@ -418,11 +439,13 @@
             }
 
             const gs = { stage: 'assign', assignIdx: 0, turnIdx: 0 };
-            const initBoard = JSON.stringify({ keyword: "", guessed: false });
+            const initBoard = JSON.stringify({ keyword: "", guessed: false, spectator: false });
+            const specBoard = JSON.stringify({ keyword: "", guessed: false, spectator: true });
 
+            // 💡 픽스: 참가를 안 누른 사람은 쫓아내지 않고 spectator: true 상태로 남깁니다.
             const unreadyPlayers = activePlayers.filter(p => !p.is_ready);
             for(let p of unreadyPlayers) {
-                await supabaseClient.from('game_players').update({ is_active: false, is_ready: false, board_state: initBoard }).eq('room_code', state.roomCode).eq('user_id', p.user_id);
+                await supabaseClient.from('game_players').update({ board_state: specBoard, is_ready: false }).eq('room_code', state.roomCode).eq('user_id', p.user_id);
             }
 
             for(let p of readyPlayers) {
@@ -442,10 +465,15 @@
             const { data: room } = await supabaseClient.from('game_rooms').select('current_theme').eq('room_code', state.roomCode).single();
             let gs = JSON.parse(room.current_theme || "{}");
             
-            const targetPlayer = state.players[gs.assignIdx % Math.max(state.players.length, 1)];
+            // 💡 픽스: 관전자를 제외하고 게임 진행
+            const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true);
+            const playingPlayers = (players || []).filter(p => !parseBoard(p.board_state).spectator);
+            const pLen = Math.max(playingPlayers.length, 1);
+
+            const targetPlayer = playingPlayers[gs.assignIdx % pLen];
             
             if (targetPlayer) {
-                let pBoard = { keyword: kw, guessed: false };
+                let pBoard = { keyword: kw, guessed: false, spectator: false };
                 await supabaseClient.from('game_players').update({ board_state: JSON.stringify(pBoard) }).eq('room_code', state.roomCode).eq('user_id', targetPlayer.user_id);
                 await supabaseClient.from('game_chat').insert([{ room_code: state.roomCode, user_name: "SYSTEM", color: "#ccc", message: `[${targetPlayer.user_name}]의 제시어가 등록되었습니다.` }]);
             }
@@ -453,7 +481,7 @@
             gs.assignIdx += 1;
             input.value = "";
             
-            if (gs.assignIdx >= state.players.length) {
+            if (gs.assignIdx >= playingPlayers.length) {
                 gs.stage = 'play';
                 await supabaseClient.from('game_chat').insert([{ room_code: state.roomCode, user_name: "SYSTEM", color: "#ccc", message: `🏁 모든 제시어가 세팅되었습니다! 질문을 시작하세요.` }]);
             }
@@ -466,12 +494,15 @@
             showLoading(true);
             const { data: room } = await supabaseClient.from('game_rooms').select('current_theme').eq('room_code', state.roomCode).single();
             let gs = JSON.parse(room.current_theme || "{}");
-            const pLen = Math.max(state.players.length, 1);
+            
+            const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true);
+            const playingPlayers = (players || []).filter(p => !parseBoard(p.board_state).spectator);
+            const pLen = Math.max(playingPlayers.length, 1);
             
             do {
                 gs.turnIdx += 1;
-                let nextPlayer = state.players[gs.turnIdx % pLen];
-                if (!nextPlayer) break; // 안전장치
+                let nextPlayer = playingPlayers[gs.turnIdx % pLen];
+                if (!nextPlayer) break; 
                 let npBoard = parseBoard(nextPlayer.board_state);
                 if (!npBoard.guessed) break; 
             } while (gs.turnIdx % pLen !== JSON.parse(room.current_theme || "{}").turnIdx % pLen); 
@@ -497,9 +528,10 @@
                 closeGuessModal();
                 showToast("정답입니다!");
 
+                // 💡 승리 조건: 관전자를 제외한 실제 플레이어 모두가 맞췄는지 확인
                 const { data: checkPlayers } = await supabaseClient.from('game_players').select('board_state').eq('room_code', state.roomCode).eq('is_active', true);
-                const activeChecks = checkPlayers || [];
-                if (activeChecks.every(p => parseBoard(p.board_state).guessed === true)) {
+                const playingChecks = (checkPlayers || []).filter(p => !parseBoard(p.board_state).spectator);
+                if (playingChecks.every(p => parseBoard(p.board_state).guessed === true)) {
                     await supabaseClient.from('game_rooms').update({ status: 'revealed' }).eq('room_code', state.roomCode);
                 }
             } else {
@@ -514,7 +546,7 @@
         function confirmRestartGame() { openConfirmModal("모든 데이터를 초기화하시겠습니까?\n(메모 로그 영구 삭제)", handleRestartGame); }
         async function handleRestartGame() {
             showLoading(true);
-            const initBoard = JSON.stringify({ keyword: "", guessed: false });
+            const initBoard = JSON.stringify({ keyword: "", guessed: false, spectator: false });
             await supabaseClient.from('game_rooms').update({ status: 'waiting', current_theme: '' }).eq('room_code', state.roomCode);
             await supabaseClient.from('game_players').update({ board_state: initBoard, is_ready: false }).eq('room_code', state.roomCode);
             await supabaseClient.from('game_chat').delete().eq('room_code', state.roomCode);
@@ -543,12 +575,12 @@
         function openMemberManage() { closeRoomManage(); const list = document.getElementById('member-manage-list'); list.innerHTML = state.players.map(p => `<div class="flex justify-between items-center py-2 border-b border-[#e2e3e3] last:border-0"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full" style="background-color: ${p.color}"></div><span class="text-[#333] font-medium">${p.user_name}</span></div>${p.user_id !== state.user.id ? `<button onclick="confirmKickMember('${p.user_id}', '${p.user_name}')" class="text-xs border border-[#ccc] px-2 py-1 hover:bg-[#f1f3f4]">제외</button>` : `<span class="text-xs text-[#9aa0a6]">관리자</span>`}</div>`).join(''); document.getElementById('modal-member-list').classList.remove('hidden'); }
         function closeMemberManage() { document.getElementById('modal-member-list').classList.add('hidden'); }
         function confirmKickMember(id, name) { openConfirmModal(`[${name}] 레코드를 제외하시겠습니까?\n프로세스가 재시작됩니다.`, () => handleKickMember(id)); }
-        async function handleKickMember(id) { showLoading(true); await supabaseClient.from('game_players').update({ is_active: false, is_ready: false, board_state: JSON.stringify({keyword:"", guessed:false}) }).eq('room_code', state.roomCode).eq('user_id', id); await handleRestartGame(); showLoading(false); showToast("제외 완료"); closeMemberManage(); }
+        async function handleKickMember(id) { showLoading(true); await supabaseClient.from('game_players').update({ is_active: false, is_ready: false, board_state: JSON.stringify({keyword:"", guessed:false, spectator:false}) }).eq('room_code', state.roomCode).eq('user_id', id); await handleRestartGame(); showLoading(false); showToast("제외 완료"); closeMemberManage(); }
 
         function openRoomManage() { document.getElementById('modal-room-manage').classList.remove('hidden'); }
         function closeRoomManage() { document.getElementById('modal-room-manage').classList.add('hidden'); }
         
-        function confirmLeaveRoom() { closeRoomManage(); openConfirmModal("방에서 완전히 나가시겠습니까?\n(진행 중인 프로세스가 초기화됩니다.)", async () => { showLoading(true); await supabaseClient.from('game_players').update({ is_active: false, is_ready: false, board_state: JSON.stringify({keyword:"", guessed:false}) }).eq('room_code', state.roomCode).eq('user_id', state.user.id); await handleRestartGame(); goToLobby(); }); }
+        function confirmLeaveRoom() { closeRoomManage(); openConfirmModal("방에서 완전히 나가시겠습니까?\n(진행 중인 프로세스가 초기화됩니다.)", async () => { showLoading(true); await supabaseClient.from('game_players').update({ is_active: false, is_ready: false, board_state: JSON.stringify({keyword:"", guessed:false, spectator:false}) }).eq('room_code', state.roomCode).eq('user_id', state.user.id); await handleRestartGame(); goToLobby(); }); }
         
         async function handleShareRoom() { const baseUrl = window.location.href.split('?')[0]; const t = `[공유 워크스페이스]\n시트: ${state.roomData.room_name}\n엑세스 키: ${state.roomCode}\n접속: ${baseUrl}?code=${state.roomCode}`; const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent); try { if (isMobile && navigator.share) { await navigator.share({ text: t }); } else { await copyToClipboard(t); } } catch (e) { await copyToClipboard(t); } closeRoomManage(); }
         async function copyToClipboard(text) { if (navigator.clipboard && window.isSecureContext) { try { await navigator.clipboard.writeText(text); showToast("클립보드에 복사됨"); return; } catch (err) {} } const textArea = document.createElement("textarea"); textArea.value = text; textArea.style.position = "fixed"; textArea.style.left = "-9999px"; textArea.style.top = "0"; document.body.appendChild(textArea); textArea.focus(); textArea.select(); try { document.execCommand('copy'); showToast("클립보드에 복사됨"); } catch (err) { showToast("복사 실패"); } document.body.removeChild(textArea); }
