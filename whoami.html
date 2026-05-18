@@ -25,14 +25,14 @@
 
     <div id="toast" class="fixed bottom-16 left-1/2 -translate-x-1/2 bg-[#323232] text-white px-4 py-2 opacity-0 transition-all z-[300] pointer-events-none text-xs w-max text-center shadow-md">시스템 알림</div>
 
-    <div id="modal-room-manage" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[200]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333]">도구 (관리)</div><div class="p-4 flex flex-col gap-2"><button onclick="openMemberManage()" class="border border-[#ccc] py-1.5 px-3 hover:bg-[#f1f3f4] text-left">참여자 권한 관리</button><button onclick="handleShareRoom()" class="border border-[#ccc] py-1.5 px-3 hover:bg-[#f1f3f4] text-left">공유 링크 복사</button><button onclick="openRenameModal()" class="border border-[#ccc] py-1.5 px-3 hover:bg-[#f1f3f4] text-left">시트 이름 변경</button><div class="border-t border-[#ccc] mt-2 pt-2 space-y-2"><button onclick="confirmLeaveRoom()" class="border border-[#ccc] bg-[#f8f9fa] text-[#333] py-1.5 px-3 hover:bg-[#e8eaed] w-full text-left font-bold">방 나가기 (세션 이탈)</button><button onclick="confirmDeleteRoom()" class="border border-[#ccc] bg-[#fce8e6] text-[#c5221f] py-1.5 px-3 hover:bg-[#fad2cf] w-full text-left">데이터 영구 삭제 (폭파)</button></div></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right"><button onclick="closeRoomManage()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">닫기</button></div></div></div>
+    <div id="modal-room-manage" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[200]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333]">도구 (관리)</div><div class="p-4 flex flex-col gap-2"><button onclick="openMemberManage()" class="border border-[#ccc] py-1.5 px-3 hover:bg-[#f1f3f4] text-left">참여자 권한 관리</button><button onclick="handleShareRoom()" class="border border-[#ccc] py-1.5 px-3 hover:bg-[#f1f3f4] text-left">공유 링크 복사</button><button onclick="openRenameModal()" class="border border-[#ccc] py-1.5 px-3 hover:bg-[#f1f3f4] text-left">시트 이름 변경</button><div class="border-t border-[#ccc] mt-2 pt-2 space-y-2"><button onclick="confirmLeaveRoom()" class="border border-[#ccc] bg-[#f8f9fa] text-[#333] py-1.5 px-3 hover:bg-[#e8eaed] w-full text-left font-bold">🚪 방 나가기 (세션 이탈)</button><button onclick="confirmDeleteRoom()" class="border border-[#ccc] bg-[#fce8e6] text-[#c5221f] py-1.5 px-3 hover:bg-[#fad2cf] w-full text-left">데이터 영구 삭제 (폭파)</button></div></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right"><button onclick="closeRoomManage()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">닫기</button></div></div></div>
     <div id="modal-member-list" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[210]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333]">참여자 권한 관리</div><div id="member-manage-list" class="p-4 max-h-60 overflow-y-auto space-y-1"></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right"><button onclick="closeMemberManage()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">닫기</button></div></div></div>
     <div id="modal-rename" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[220]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333]">시트 이름 변경</div><div class="p-4"><input type="text" id="renameInput" class="w-full p-2 border border-[#ccc] outline-none focus:border-[#333]"></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right flex justify-end gap-2"><button onclick="closeRenameModal()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">취소</button><button onclick="handleRenameRoom()" class="bg-[#333] text-white border border-[#333] px-4 py-1 hover:bg-black">적용</button></div></div></div>
     <div id="modal-confirm" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[230]"><div class="bg-white border border-[#ccc] shadow-lg w-full max-w-sm p-0 text-sm"><div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333]">시스템 경고</div><div class="p-6"><p id="confirm-message" class="text-[#333] whitespace-pre-line"></p></div><div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right flex justify-end gap-2"><button onclick="closeConfirmModal()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">취소</button><button id="btn-confirm-action" class="bg-[#333] text-white border border-[#333] px-4 py-1 hover:bg-black">확인</button></div></div></div>
 
     <div id="modal-guess" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[260] p-4">
         <div class="bg-white border border-[#ccc] shadow-2xl w-full max-w-sm p-0 text-sm">
-            <div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-3 font-bold text-[#333]">정답 제출하기</div>
+            <div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-3 font-bold text-[#333]">🎯 정답 제출하기</div>
             <div class="p-6">
                 <p class="text-xs text-[#5f6368] mb-3">내 머리 위에 붙어있는 제시어는 무엇일까요?</p>
                 <input type="text" id="guessInput" class="w-full p-3 bg-[#f8f9fa] border border-[#ccc] rounded outline-none font-bold text-center text-lg focus:border-[#333] focus:bg-white transition-colors" placeholder="정답 입력">
@@ -43,38 +43,6 @@
             </div>
         </div>
     </div>
-
-    <div id="modal-help" class="hidden fixed inset-0 bg-white/80 flex items-center justify-center z-[250]">
-        <div class="bg-white border border-[#ccc] shadow-lg w-full max-w-lg p-0 text-sm flex flex-col max-h-[85vh]">
-            <div class="bg-[#f1f3f4] border-b border-[#ccc] px-4 py-2 font-bold text-[#333] flex justify-between items-center">
-                <span>도움말 : 양세찬 게임 (WHO AM I?)</span>
-                <button onclick="closeHelpModal()" class="text-[#999] hover:text-[#333] font-bold">X</button>
-            </div>
-            <div class="p-5 overflow-y-auto space-y-4 text-[#333] leading-relaxed text-xs md:text-sm">
-                <div>
-                    <h3 class="font-bold text-[#333] mb-1">1. 게임 개요</h3>
-                    <p>자신의 이마에 붙은 '제시어'가 무엇인지 다른 사람들에게 스무고개처럼 질문을 던져 알아맞히는 추리 게임입니다.</p>
-                </div>
-                <div>
-                    <h3 class="font-bold text-[#333] mb-1">2. 제시어 릴레이 지정</h3>
-                    <p>게임이 시작되면 한 명씩 돌아가며 타겟이 됩니다. 타겟을 제외한 나머지 사람들이 채팅으로 상의한 뒤, <b>하단 입력창을 통해 타겟의 제시어를 부여</b>합니다.</p>
-                </div>
-                <div>
-                    <h3 class="font-bold text-[#333] mb-1">3. 질문과 정답 (메인 게임)</h3>
-                    <ul class="list-disc pl-5 space-y-1">
-                        <li><b>비밀 조회:</b> 엑셀 표에서 타인의 제시어 칸의 <code>[조회]</code> 버튼을 꾹 누르고 있으면 제시어가 보입니다. (내 것은 영원히 안 보입니다.)</li>
-                        <li><b>턴 진행:</b> 본인 턴이 되면 채팅으로 자신의 제시어에 대한 힌트를 묻고 <code>[턴 넘기기]</code>를 누릅니다.</li>
-                        <li><b>정답 도전:</b> 남의 턴이든 내 턴이든 하단의 <code>[정답 맞히기]</code> 버튼을 눌러 언제든지 기습 정답 제출이 가능합니다!</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="bg-[#f1f3f4] border-t border-[#ccc] px-4 py-2 text-right">
-                <button onclick="closeHelpModal()" class="bg-white border border-[#ccc] px-4 py-1 hover:bg-gray-50">닫기</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="screen-color" class="hidden flex-1 items-center justify-center bg-[#f8f9fa]"><div class="bg-white border border-[#ccc] shadow-sm p-6 w-full max-w-sm"><h2 class="text-sm font-bold text-[#333] mb-4 border-b pb-2">작업자 레이블 색상 할당</h2><div id="color-grid" class="grid grid-cols-5 gap-2 mb-4"></div><button onclick="goToLobby()" class="text-xs text-[#333] underline">세션 종료 (로비로)</button></div></div>
 
     <div id="screen-game" class="hidden flex-col h-full w-full">
         
@@ -160,7 +128,7 @@
 
     <script>
         const supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-        const COLORS = ["#ea4335", "#f29900", "#fbbc04", "#34a853", "#46bdc6", "#4285f4", "#8ab4f8", "#9334e6", "#f06292", "#9aa0a6"];
+        const COLORS = ["#777777", "#555555", "#333333", "#444444", "#666666", "#222222", "#888888", "#999999", "#aaaaaa", "#bbbbbb"]; // 유저 원색 레이블도 연한 무채색으로 정돈
         const state = { user: null, roomCode: null, roomData: null, players: [], myPlayerInfo: null };
 
         function showToast(msg) { const toast = document.getElementById('toast'); toast.innerText = msg; toast.classList.remove('opacity-0', 'translate-y-5'); setTimeout(() => toast.classList.add('opacity-0', 'translate-y-5'), 2000); }
@@ -225,7 +193,6 @@
 
         async function enterGame() {
             document.getElementById('screen-game').classList.remove('hidden'); document.getElementById('screen-game').classList.add('flex');
-            
             try {
                 supabaseClient.channel('room_' + state.roomCode)
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'game_rooms', filter: `room_code=eq.${state.roomCode}` }, refreshGame)
@@ -233,7 +200,6 @@
                     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_chat', filter: `room_code=eq.${state.roomCode}` }, (p) => appendChatMessage(p.new))
                     .subscribe();
             } catch(e) { console.error(e); }
-            
             await loadChatHistory(state.roomCode); 
             refreshGame();
         }
@@ -252,8 +218,8 @@
                 const { data: room } = await supabaseClient.from('game_rooms').select('*').eq('room_code', state.roomCode).single();
                 if(!room) { alert("연결이 끊어졌습니다."); return goToLobby(); }
                 
-                // 💡 절대 정렬 매핑 고정 (.order('user_name') 가나다 정렬 일치)
-                const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true).order('user_name');
+                // 💡 픽스 1: 턴 꼬임 방지를 위해 무조건 들어온 순서인 'id' 정렬로 가속 정렬 고정!
+                const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true).order('id', { ascending: true });
                 const activePlayers = players || [];
                 
                 const me = activePlayers.find(p => p.user_id === state.user.id);
@@ -276,7 +242,7 @@
                 try { gs = JSON.parse(state.roomData.current_theme || "{}"); } catch(e) {} 
             }
 
-            // 가나다순으로 완전 고정된 실연 플레이어 추출
+            // 고정된 입장 순서(`id`) 기반으로 타겟과 질문 턴 산정
             const playingPlayers = state.players.filter(p => !parseBoard(p.board_state).spectator);
             const pLen = Math.max(playingPlayers.length, 1);
             
@@ -289,7 +255,7 @@
 
             let displayMsg = "#WAITING_FOR_MACRO";
             let displayThemeEl = document.getElementById('display-theme');
-            displayThemeEl.className = "flex-1 px-3 font-mono font-bold outline-none truncate transition-colors duration-300 text-[#333]"; 
+            displayThemeEl.className = "flex-1 px-3 font-mono font-bold outline-none truncate text-[#333]"; 
             
             if (state.roomData.status === 'waiting') {
                 displayMsg = "=READY_CHECK(Action: '참가 준비를 완료하세요')";
@@ -313,7 +279,7 @@
                 if (gs.stage === 'play' && activePlayer?.user_id === p.user_id) rowBg = "bg-[#f1f3f4]";
                 if (gs.stage === 'assign' && assignTargetPlayer?.user_id === p.user_id) rowBg = "bg-[#f1f3f4]";
                 
-                let nameHtml = `<div class="flex items-center gap-1.5 truncate"><div class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: ${p.color}"></div><span class="truncate font-bold ${p.user_id === state.user.id ? 'text-black underline' : 'text-[#333]'}">${p.user_name}</span></div>`;
+                let nameHtml = `<div class="flex items-center gap-1.5 truncate"><div class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: #555"></div><span class="truncate font-bold ${p.user_id === state.user.id ? 'text-black underline' : 'text-[#333]'}${pData.spectator ? ' opacity-40' : ''}">${p.user_name}</span></div>`;
 
                 let keywordHtml = "";
                 let statusHtml = "";
@@ -322,13 +288,12 @@
                     statusHtml = p.is_ready ? `<span class="text-[#333] font-bold">준비 완료</span>` : `<span class="text-[#777]">대기 중</span>`;
                     keywordHtml = `<span class="text-[#ccc] italic">-</span>`;
                 } else if (pData.spectator) {
-                    statusHtml = `<span class="text-[#777]">관전 중</span>`;
+                    statusHtml = `<span class="text-[#777] italic">관전 중</span>`;
                     keywordHtml = `<span class="text-[#ccc] italic">-</span>`;
                 } else if (pData.guessed || state.roomData.status === 'revealed') {
                     statusHtml = `<span class="text-[#333] font-bold">✔ 정답 판명</span>`;
-                    keywordHtml = `<span class="text-[#333] font-black tracking-widest bg-[#f1f3f4] px-2 py-0.5 rounded shadow-sm">${pData.keyword}</span>`;
+                    keywordHtml = `<span class="text-[#333] font-black tracking-widest bg-[#f1f3f4] px-2 py-0.5 rounded shadow-sm border border-gray-300">${pData.keyword}</span>`;
                 } else {
-                    // 메인 진행 중 상태 레이블 (흑백화)
                     if (gs.stage === 'assign') {
                         statusHtml = (assignTargetPlayer?.user_id === p.user_id) ? `<span class="text-[#333] font-bold animate-pulse">제시어 입력 중...</span>` : `<span class="text-[#777]">대기</span>`;
                     } else if (gs.stage === 'play') {
@@ -336,7 +301,7 @@
                     }
                     
                     if (p.user_id === state.user.id) {
-                        keywordHtml = `<span class="text-[#333] font-bold">?</span>`; // 본인 화면 간소화 픽스
+                        keywordHtml = `<span class="text-[#333] font-bold">?</span>`; 
                     } else {
                         keywordHtml = `
                         <div class="relative flex items-center justify-center w-full h-full cursor-pointer group" onpointerdown="this.children[1].classList.remove('hidden'); this.children[0].classList.add('hidden')" onpointerup="this.children[1].classList.add('hidden'); this.children[0].classList.remove('hidden')" onpointerleave="this.children[1].classList.add('hidden'); this.children[0].classList.remove('hidden')" oncontextmenu="event.preventDefault();" style="touch-action: none; -webkit-user-select: none; user-select: none;">
@@ -356,20 +321,23 @@
             });
             document.getElementById('player-board-container').innerHTML = boardHTML;
 
-            // 흑백 테마 버튼 제어
             document.getElementById('btn-ready').classList.toggle('hidden', state.roomData.status !== 'waiting');
             const btnReady = document.getElementById('btn-ready');
             btnReady.innerText = state.myPlayerInfo?.is_ready ? "준비 취소" : "참가 (Ready)";
             
+            if(state.myPlayerInfo?.is_ready) { 
+                btnReady.classList.replace('bg-[#1a73e8]', 'bg-[#f1f3f4]'); btnReady.classList.replace('text-white', 'text-[#333]'); btnReady.classList.replace('border-[#1557b0]', 'border-[#ccc]'); 
+            } else { 
+                btnReady.classList.replace('bg-[#f1f3f4]', 'bg-[#1a73e8]'); btnReady.classList.replace('text-[#333]', 'text-white'); btnReady.classList.replace('border-[#ccc]', 'border-[#1557b0]'); 
+            }
+
             const btnStart = document.getElementById('btn-start');
             btnStart.classList.toggle('hidden', state.roomData.status !== 'waiting');
             
             if (state.myPlayerInfo?.is_ready) {
-                btnStart.disabled = false;
-                btnStart.classList.remove('opacity-40', 'cursor-not-allowed');
+                btnStart.disabled = false; btnStart.classList.remove('opacity-40', 'cursor-not-allowed');
             } else {
-                btnStart.disabled = true;
-                btnStart.classList.add('opacity-40', 'cursor-not-allowed');
+                btnStart.disabled = true; btnStart.classList.add('opacity-40', 'cursor-not-allowed');
             }
 
             const showAssign = state.roomData.status === 'playing' && gs.stage === 'assign' && (!isMyAssignTurn || playingPlayers.length === 1);
@@ -388,7 +356,7 @@
             btnEndTurn.disabled = !isMyTurn;
             btnEndTurn.innerText = isMyTurn ? "질문 완료 (턴 넘기기)" : "상대방 턴 진행중";
 
-            // 내 제시어 턴일 때 채팅 블라인드 가동
+            // 내 제시어 턴일 때 채팅 블라인드 완벽 가동
             const chatBlind = document.getElementById('chat-blind');
             if (chatBlind) {
                 chatBlind.classList.toggle('hidden', !isMyAssignTurn);
@@ -404,39 +372,28 @@
         async function startGame() {
             const btnStart = document.getElementById('btn-start'); btnStart.disabled = true; showLoading(true);
             
-            const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true).order('user_name');
+            // 💡 픽스 2: 시작할 때도 들어온 순서('id')로 정렬하여 인덱스 일치 유도
+            const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true).order('id', { ascending: true });
             const activePlayers = players || [];
             const readyPlayers = activePlayers.filter(p => p.is_ready);
             
-            if (readyPlayers.length < 1) { 
-                showLoading(false); btnStart.disabled = false; 
-                return showToast("최소 1명 이상의 참가자가 필요합니다."); 
-            }
+            if (readyPlayers.length < 1) { showLoading(false); btnStart.disabled = false; return showToast("최소 1명 이상의 참가자가 필요합니다."); }
 
             const me = activePlayers.find(p => p.user_id === state.user.id);
-            if (!me || !me.is_ready) {
-                showLoading(false); btnStart.disabled = false;
-                return showToast("본인이 먼저 참가(Ready)를 눌러야 시작할 수 있습니다.");
-            }
+            if (!me || !me.is_ready) { showLoading(false); btnStart.disabled = false; return showToast("본인이 먼저 참가(Ready)를 눌러야 시작할 수 있습니다."); }
 
             const gs = { stage: 'assign', assignIdx: 0, turnIdx: 0 };
             const initBoard = JSON.stringify({ keyword: "", guessed: false, spectator: false });
             const specBoard = JSON.stringify({ keyword: "", guessed: false, spectator: true });
 
             const unreadyPlayers = activePlayers.filter(p => !p.is_ready);
-            for(let p of unreadyPlayers) {
-                await supabaseClient.from('game_players').update({ board_state: specBoard, is_ready: false }).eq('room_code', state.roomCode).eq('user_id', p.user_id);
-            }
-
-            for(let p of readyPlayers) {
-                await supabaseClient.from('game_players').update({ board_state: initBoard, is_ready: false }).eq('room_code', state.roomCode).eq('user_id', p.user_id);
-            }
+            for(let p of unreadyPlayers) { await supabaseClient.from('game_players').update({ board_state: specBoard, is_ready: false }).eq('room_code', state.roomCode).eq('user_id', p.user_id); }
+            for(let p of readyPlayers) { await supabaseClient.from('game_players').update({ board_state: initBoard, is_ready: false }).eq('room_code', state.roomCode).eq('user_id', p.user_id); }
 
             await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs), status: 'playing' }).eq('room_code', state.roomCode);
             showLoading(false); btnStart.disabled = false;
         }
 
-        // 💡 픽스: 클라이언트 로컬 캐시 메모리(state.players)를 다이렉트로 매핑하여 순서 어긋남 완벽 방어
         async function handleChatSubmit(e) {
             e.preventDefault(); const i = document.getElementById('chat-input'); const m = i.value.trim(); if(!m) return; i.value = ""; i.focus();
             
@@ -448,18 +405,20 @@
                 const playingPlayers = state.players.filter(p => !parseBoard(p.board_state).spectator);
                 const pLen = Math.max(playingPlayers.length, 1);
                 const targetPlayer = playingPlayers[gs.assignIdx % pLen];
-                if (targetPlayer) prefix = `[SPOIL:${targetPlayer.user_id}]`; // 스포일러 방지 암호화 태그 부착
+                // 💡 픽스 3: 정확하게 보정된 순서의 플레이어 ID를 태그하여 스포일러 완벽 봉쇄
+                if (targetPlayer) prefix = `[SPOIL:${targetPlayer.user_id}]`; 
             }
             
             await supabaseClient.from('game_chat').insert([{ room_code: state.roomCode, user_name: state.user.user_metadata.display_name, color: state.myPlayerInfo?.color || '#333', message: prefix + m }]);
         }
 
         function appendChatMessage(c) {
-            let msg = c.message;
-            // 💡 픽스: 내가 타겟일 때의 대화 기록은 로컬 브라우저 렌더링을 영구 차단하여 스포일러 완벽 방지
+            let msg = c.message || ""; // 💡 픽스 4: 공백 또는 에러 메시지 유입 시 렌더링 다운 방지 안전조치
+            
+            // 💡 픽스 5: 내 타겟 턴일 때 결정되는 방 내역은 렌더링 자체를 통틀어 드롭 (가막해제 후에도 영원히 유출 불가)
             const spoilMatch = msg.match(/^\[SPOIL:(.+?)\]/);
             if (spoilMatch) {
-                if (spoilMatch[1] === state.user.id) return; // 내 이마에 적히는 단어 추리 대화면 아예 영원히 스킵
+                if (spoilMatch[1] === state.user.id) return; 
                 msg = msg.replace(/^\[SPOIL:.+?\]/, ''); 
             }
 
@@ -487,7 +446,7 @@
             
             const playingPlayers = state.players.filter(p => !parseBoard(p.board_state).spectator);
             const pLen = Math.max(playingPlayers.length, 1);
-            const targetPlayer = playingPlayers[gs.assignIdx % pLen]; // 💡 정확한 순서 매핑 픽스
+            const targetPlayer = playingPlayers[gs.assignIdx % pLen]; 
             
             if (targetPlayer) {
                 let pBoard = { keyword: kw, guessed: false, spectator: false };
@@ -584,8 +543,6 @@
         function closeRenameModal() { document.getElementById('modal-rename').classList.add('hidden'); }
         async function handleRenameRoom() { const n = document.getElementById('renameInput').value.trim(); if(!n) return; await supabaseClient.from('game_rooms').update({ room_name: n }).eq('room_code', state.roomCode); showToast("변경 저장됨"); closeRenameModal(); }
         function confirmDeleteRoom() { closeRoomManage(); openConfirmModal("모든 데이터를 영구 삭제하시겠습니까?", async () => { await supabaseClient.from('game_rooms').delete().eq('room_code', state.roomCode); goToLobby(); }); }
-        function openConfirmModal(m, a) { document.getElementById('confirm-message').innerText = m; const b = document.getElementById('btn-confirm-action'); const nb = b.cloneNode(true); b.parentNode.replaceChild(nb, b); nb.onclick = () => { closeConfirmModal(); a(); }; document.getElementById('modal-confirm').classList.remove('hidden'); }
-        function closeConfirmModal() { document.getElementById('modal-confirm').classList.add('hidden'); }
     </script>
 </body>
 </html>
