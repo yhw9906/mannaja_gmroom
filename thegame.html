@@ -540,67 +540,62 @@
             openConfirmModal(`[${name}] 플레이어를 제외하시겠습니까?\n해당 플레이어의 카드는 덱으로 회수되고, 게임은 멈추지 않고 계속 진행됩니다.`, () => handleKickMember(id)); 
         }
 
+        function confirmLeaveRoom() { 
+            closeRoomManage(); 
+            openConfirmModal("방에서 완전히 나가시겠습니까?\n(가진 패는 덱으로 반환되며 게임은 계속됩니다.)", () => handleKickMember(state.user.id)); 
+        }
+
         async function handleKickMember(id) { 
             showLoading(true); 
             
-            // 1. 방 정보 및 활성 플레이어 전체 가져오기
             const { data: room } = await supabaseClient.from('game_rooms').select('status, current_theme').eq('room_code', state.roomCode).single();
             const { data: players } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('is_active', true).order('user_name');
             
             const kickedPlayer = players.find(p => p.user_id === id);
             const remainingPlayers = players.filter(p => p.user_id !== id);
             
-            // 대기 중일 때는 단순히 제외만 처리
             if (room.status !== 'playing') {
                 await supabaseClient.from('game_players').update({ is_active: false, selected_slot: null, secret_number: null, is_ready: false, board_state: '[]' }).eq('room_code', state.roomCode).eq('user_id', id);
-                showLoading(false); showToast("제외 완료"); closeMemberManage();
-                return;
+                if (id === state.user.id) { goToLobby(); return; }
+                showLoading(false); showToast("제외 완료"); closeMemberManage(); return;
             }
 
-            // 2. 게임 진행 중인 경우: 패 회수 -> 덱 셔플 -> 패 재분배 로직
             let gs = JSON.parse(room.current_theme || "{}");
             let kickedHand = parseBoard(kickedPlayer.board_state);
             
-            // 제외된 플레이어의 패를 덱에 반환하고 셔플
             if (kickedHand.length > 0) {
                 gs.deck = gs.deck.concat(kickedHand);
                 gs.deck.sort(() => Math.random() - 0.5);
             }
 
-            // 플레이어 제외 처리 (DB)
             await supabaseClient.from('game_players').update({ is_active: false, board_state: '[]', selected_slot: null, is_ready: false }).eq('room_code', state.roomCode).eq('user_id', id);
 
             if (remainingPlayers.length > 0) {
-                // 남은 인원에 따른 1인당 최대 패 개수 재계산 (1명=8장, 2명=7장, 3명이상=6장)
                 const maxHand = remainingPlayers.length === 1 ? 8 : (remainingPlayers.length === 2 ? 7 : 6);
-                
-                // 부족한 패가 있으면 덱에서 보충
                 for (let p of remainingPlayers) {
                     let hand = parseBoard(p.board_state);
                     let needsUpdate = false;
-                    while (hand.length < maxHand && gs.deck.length > 0) {
-                        hand.push(gs.deck.shift());
-                        needsUpdate = true;
-                    }
+                    while (hand.length < maxHand && gs.deck.length > 0) { hand.push(gs.deck.shift()); needsUpdate = true; }
                     if (needsUpdate) {
                         hand.sort((a, b) => a - b);
                         await supabaseClient.from('game_players').update({ board_state: JSON.stringify(hand) }).eq('room_code', state.roomCode).eq('user_id', p.user_id);
                     }
                 }
-
-                // 턴 인덱스가 꼬이지 않도록 모듈러 연산 보정 및 제출 수 초기화 (새로운 턴처럼 갱신)
                 gs.turnIndex = gs.turnIndex % remainingPlayers.length;
                 gs.cardsPlayedThisTurn = 0;
-
                 await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs) }).eq('room_code', state.roomCode);
             } else {
-                // 아무도 안 남았으면 방 초기화
                 await supabaseClient.from('game_rooms').update({ status: 'waiting', current_theme: '' }).eq('room_code', state.roomCode);
             }
 
-            showLoading(false); 
-            showToast("제외 완료 (패 회수 및 재조정됨)"); 
-            closeMemberManage(); 
+            // 💡 만약 킥 대상이 '나'라면 로비로 이동, 남이라면 모달 닫기
+            if (id === state.user.id) {
+                goToLobby();
+            } else {
+                showLoading(false); 
+                showToast("제외 완료 (패 회수 및 재조정됨)"); 
+                closeMemberManage(); 
+            }
         }
         
         
