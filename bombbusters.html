@@ -142,7 +142,6 @@
 
     <script>
         const supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-        // 💡 [원복 완료]: 다른 기존 게임들과 일치하는 화사한 오리지널 10색 비비드 팔레트 세팅
         const COLORS = ["#ea4335", "#f29900", "#fbbc04", "#34a853", "#46bdc6", "#4285f4", "#8ab4f8", "#9334e6", "#f06292", "#9aa0a6"];
         const state = { user: null, roomCode: null, roomData: null, players: [], selectedCards: [], myPlayerInfo: null };
 
@@ -150,17 +149,13 @@
         function showLoading(show) { document.getElementById('loading').classList.toggle('hidden', !show); }
         function goToLobby() { window.location.href = 'index.html'; }
 
-        function parseBoard(raw) {
-            const defaultBoard = { keyword: "", guessed: false, spectator: false };
-            if (!raw) return defaultBoard;
-            if (typeof raw === 'object' && !Array.isArray(raw)) return Object.assign({}, defaultBoard, raw);
-            if (typeof raw === 'string') { 
-                try { 
-                    let parsed = JSON.parse(raw); 
-                    return (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) ? Object.assign({}, defaultBoard, parsed) : defaultBoard; 
-                } catch(e) { return defaultBoard; } 
-            }
-            return defaultBoard;
+        // 💡 [복구 완료]: 유실되었던 배열 스위칭 엔진 로직 재생성
+        function shuffle(a) { 
+            for (let i = a.length - 1; i > 0; i--) { 
+                let j = Math.floor(Math.random() * (i + 1)); 
+                [a[i], a[j]] = [a[j], a[i]]; 
+            } 
+            return a; 
         }
 
         window.onload = async () => {
@@ -182,8 +177,6 @@
                 .eq('user_id', state.user.id);
 
             if (fetchErr) { alert("플레이어 정보 조회 실패: " + fetchErr.message); return goToLobby(); }
-
-            const initBoard = JSON.stringify({ keyword: "", guessed: false, spectator: false });
 
             if (!existingPlayers || existingPlayers.length === 0) {
                 showColorSelection();
@@ -471,10 +464,12 @@
             board.innerHTML = bHtml;
         }
 
-        async function toggleReady() { 
-            const me = state.myPlayerInfo;
-            if (!me) return;
-            await supabaseClient.from('game_players').update({ is_ready: !me.is_ready }).eq('room_code', state.roomCode).eq('user_id', state.user.id); 
+        function openSetupModal() {
+            document.getElementById('modal-setup').classList.remove('hidden');
+        }
+
+        function closeSetupModal() {
+            document.getElementById('modal-setup').classList.add('hidden');
         }
 
         function executeStartGame() {
@@ -483,8 +478,6 @@
             closeSetupModal();
             startGame(yC, rC);
         }
-
-        function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { let j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
         async function startGame(yCount, rCount) {
             showLoading(true);
@@ -539,7 +532,6 @@
                 const { error: roomUpdErr } = await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs), status: 'playing' }).eq('room_code', state.roomCode);
                 if (roomUpdErr) throw roomUpdErr;
 
-            // 💡 [오타 전면 수정]: military 키워드를 자바스크립트 표준 명령어인 finally 로 원상 복구하여 크래시 해결!
             } catch (err) {
                 alert("게임 시작 프로세스 데이터 오류: " + err.message);
             } finally {
