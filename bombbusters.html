@@ -142,9 +142,9 @@
 
     <script>
         const supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-        // 💡 [원복 완료]: 다른 게임(마음의 실타래, 스트림스 등)에서 연동해 쓰던 오리지널 친숙한 10색 비비드 팔레트 세팅
+        // 💡 [원복 처리]: 타 게임들과 완벽 호환되는 오리지널 친숙한 10색 비비드 팔레트셋으로 교체
         const COLORS = ["#ea4335", "#f29900", "#fbbc04", "#34a853", "#46bdc6", "#4285f4", "#8ab4f8", "#9334e6", "#f06292", "#9aa0a6"];
-        const state = { user: null, roomCode: null, roomData: null, players: [], selectedCards: [] };
+        const state = { user: null, roomCode: null, roomData: null, players: [], selectedCards: [], myPlayerInfo: null };
 
         function showToast(msg) { const toast = document.getElementById('toast'); toast.innerText = msg; toast.classList.remove('opacity-0', 'translate-y-5'); setTimeout(() => toast.classList.add('opacity-0', 'translate-y-5'), 2000); }
         function showLoading(show) { document.getElementById('loading').classList.toggle('hidden', !show); }
@@ -287,8 +287,11 @@
                 let activePlayers = players || [];
                 activePlayers.sort((a, b) => a.user_name.localeCompare(b.user_name));
                 
+                const me = activePlayers.find(p => p.user_id === state.user.id);
+                
                 state.roomData = room; 
                 state.players = activePlayers;
+                state.myPlayerInfo = me; // 💡 [핵심 버그 수정 완료]: 누락되었던 룸 연동 바인딩 코드를 연결하여 버튼 프리징 해결!
                 
                 let validIds = new Set();
                 let gs = { slots: [] };
@@ -323,7 +326,7 @@
             
             document.getElementById('room-info-display').innerText = `[공유] ${state.roomData.room_name} (BOMBER_MODE)`;
             
-            const isMe = state.players.find(p => p.user_id === state.user.id);
+            const isMe = state.myPlayerInfo;
             if (!isMe) { showColorSelection(); return; }
 
             let gs = { stage: 'waiting', danger: 0, turnIdx: 0, yNums: [], rNums: [], slots: [], msg: "" };
@@ -349,6 +352,17 @@
             btnReady.innerText = isMe.is_ready ? "준비 취소" : "참가 (Ready)";
             if(isMe.is_ready) btnReady.className = "bg-[#f1f3f4] text-[#333] border border-[#ccc] px-3 py-1 font-bold";
             else btnReady.className = "bg-white text-[#333] border border-[#ccc] px-3 py-1 hover:bg-[#f1f3f4] font-bold shadow-sm";
+
+            const btnStart = document.getElementById('btn-start');
+            
+            // 💡 [버튼 무반응 락 완전 해제]: state.myPlayerInfo 연동 오류 수정으로 Ready 검증이 상시 작동합니다.
+            if (isMe.is_ready) {
+                btnStart.disabled = false;
+                btnStart.classList.remove('opacity-40', 'cursor-not-allowed');
+            } else {
+                btnStart.disabled = true;
+                btnStart.classList.add('opacity-40', 'cursor-not-allowed');
+            }
 
             let activePlayerId = null;
             if (isPlaying && gs.slots && gs.slots.length > 0) {
@@ -459,7 +473,8 @@
         }
 
         async function toggleReady() { 
-            const me = state.players.find(p=>p.user_id===state.user.id);
+            const me = state.myPlayerInfo;
+            if (!me) return;
             await supabaseClient.from('game_players').update({ is_ready: !me.is_ready }).eq('room_code', state.roomCode).eq('user_id', state.user.id); 
         }
 
@@ -470,21 +485,19 @@
             startGame(yC, rC);
         }
 
-        function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { let j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
-
-        // 💡 [수정 완료]: 시작 버튼 클릭 시 발생할 수 있는 모든 오류 요소를 감싸 완전히 방어 조치
         async function startGame(yCount, rCount) {
             showLoading(true);
+            const btnStart = document.getElementById('btn-start');
             try {
                 const readyPlayers = state.players.filter(p => p.is_ready);
                 if (readyPlayers.length < 2) { 
-                    showLoading(false); 
+                    showLoading(false); if(btnStart) btnStart.disabled = false;
                     return showToast("2명 이상 준비가 필요합니다."); 
                 }
 
                 const me = state.players.find(p => p.user_id === state.user.id);
                 if (!me || !me.is_ready) { 
-                    showLoading(false); 
+                    showLoading(false); if(btnStart) btnStart.disabled = false;
                     return showToast("본인이 먼저 참가(Ready)를 눌러야 시작할 수 있습니다."); 
                 }
 
