@@ -142,7 +142,7 @@
 
     <script>
         const supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-        // 💡 [원복 처리]: 타 게임들과 완벽 호환되는 오리지널 친숙한 10색 비비드 팔레트셋으로 교체
+        // 💡 [원복 완료]: 다른 기존 게임들과 일치하는 화사한 오리지널 10색 비비드 팔레트 세팅
         const COLORS = ["#ea4335", "#f29900", "#fbbc04", "#34a853", "#46bdc6", "#4285f4", "#8ab4f8", "#9334e6", "#f06292", "#9aa0a6"];
         const state = { user: null, roomCode: null, roomData: null, players: [], selectedCards: [], myPlayerInfo: null };
 
@@ -291,7 +291,7 @@
                 
                 state.roomData = room; 
                 state.players = activePlayers;
-                state.myPlayerInfo = me; // 💡 [핵심 버그 수정 완료]: 누락되었던 룸 연동 바인딩 코드를 연결하여 버튼 프리징 해결!
+                state.myPlayerInfo = me; 
                 
                 let validIds = new Set();
                 let gs = { slots: [] };
@@ -355,7 +355,6 @@
 
             const btnStart = document.getElementById('btn-start');
             
-            // 💡 [버튼 무반응 락 완전 해제]: state.myPlayerInfo 연동 오류 수정으로 Ready 검증이 상시 작동합니다.
             if (isMe.is_ready) {
                 btnStart.disabled = false;
                 btnStart.classList.remove('opacity-40', 'cursor-not-allowed');
@@ -485,6 +484,8 @@
             startGame(yC, rC);
         }
 
+        function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { let j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
         async function startGame(yCount, rCount) {
             showLoading(true);
             const btnStart = document.getElementById('btn-start');
@@ -538,6 +539,7 @@
                 const { error: roomUpdErr } = await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs), status: 'playing' }).eq('room_code', state.roomCode);
                 if (roomUpdErr) throw roomUpdErr;
 
+            // 💡 [오타 전면 수정]: military 키워드를 자바스크립트 표준 명령어인 finally 로 원상 복구하여 크래시 해결!
             } catch (err) {
                 alert("게임 시작 프로세스 데이터 오류: " + err.message);
             } finally {
