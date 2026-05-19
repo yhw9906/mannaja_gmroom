@@ -81,6 +81,7 @@
                 <div class="text-xs md:text-sm text-[#333] font-medium truncate" id="room-info-display">Loading...</div>
                 <div class="text-[10px] md:text-[11px] text-[#5f6368] flex gap-2 md:gap-4 mt-0.5 md:mt-1">
                     <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer hidden md:inline">파일</span>
+                    <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer hidden md:inline">수정</span>
                     <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer text-[#333]" onclick="openRoomManage()">도구(관리)</span>
                     <span class="hover:bg-[#e8eaed] px-1 rounded cursor-pointer font-bold text-[#5f6368]" onclick="openHelpModal()">도움말(Help)</span>
                 </div>
@@ -147,6 +148,7 @@
         function openSetupModal() { document.getElementById('modal-setup').classList.remove('hidden'); }
         function closeSetupModal() { document.getElementById('modal-setup').classList.add('hidden'); }
         
+        // 💡 픽스: 초기 진입 시 .single() 에러 방어 및 확실한 에러 출력 기능 추가
         window.onload = async () => {
             const urlParams = new URLSearchParams(window.location.search);
             state.roomCode = urlParams.get('code');
@@ -157,26 +159,53 @@
             if (!session) { alert("로그인이 필요합니다."); return goToLobby(); }
             state.user = session.user;
 
-            const { data: room } = await supabaseClient.from('game_rooms').select('*').eq('room_code', state.roomCode).single();
-            if (!room) { alert("존재하지 않는 데이터입니다."); return goToLobby(); }
+            const { data: room, error: roomErr } = await supabaseClient.from('game_rooms').select('*').eq('room_code', state.roomCode).single();
+            if (roomErr || !room) { alert("존재하지 않는 방입니다."); return goToLobby(); }
 
-            const { data: existingPlayer } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('user_id', state.user.id).single();
-            
-            if (!existingPlayer) {
-                // 💡 픽스 1: DB 필수 컬럼 에러 회피를 위해 color와 board_state를 더미 값으로 억지로 채워넣습니다.
-                const { error } = await supabaseClient.from('game_players').insert([{ 
+            // single() 대신 select()를 사용하여 레코드 0건 에러(PGRST116)를 방지
+            const { data: existingPlayers, error: fetchErr } = await supabaseClient.from('game_players')
+                .select('*')
+                .eq('room_code', state.roomCode)
+                .eq('user_id', state.user.id);
+
+            if (fetchErr) {
+                alert("플레이어 정보 조회 실패: " + fetchErr.message);
+                return goToLobby();
+            }
+
+            const initBoard = JSON.stringify({ keyword: "", guessed: false, spectator: false });
+
+            // 플레이어 데이터가 DB에 없는 경우 새로 생성
+            if (!existingPlayers || existingPlayers.length === 0) {
+                const { error: insErr } = await supabaseClient.from('game_players').insert([{ 
                     room_code: state.roomCode, 
                     user_id: state.user.id, 
-                    user_name: state.user.user_metadata.display_name, 
+                    user_name: state.user?.user_metadata?.display_name || "플레이어", 
                     color: '#333333', 
-                    board_state: '{}', 
+                    board_state: initBoard, 
                     is_active: true, 
                     is_ready: false 
                 }]);
-                if (error) console.error("플레이어 등록 에러:", error);
-            } else if (!existingPlayer.is_active) {
-                await supabaseClient.from('game_players').update({ is_active: true, is_ready: false }).eq('room_code', state.roomCode).eq('user_id', state.user.id);
+                
+                // 삽입 실패 시 무한 로딩 대신 화면에 원인을 출력합니다.
+                if (insErr) {
+                    document.getElementById('display-theme').innerText = "#ERR_DB_INSERT_FAIL";
+                    document.getElementById('display-theme').classList.add('text-red-500');
+                    document.getElementById('player-board-container').innerHTML = `
+                        <div class="text-center text-red-500 text-xs py-10 font-bold bg-red-50 border border-red-200 rounded-md mx-4">
+                            [플레이어 등록 실패]<br><br>${insErr.message}<br><br>데이터베이스 테이블 필수값(NOT NULL) 조건을 확인해주세요.
+                        </div>`;
+                    showLoading(false);
+                    return;
+                }
+            } else {
+                // 이미 데이터가 존재한다면 활성(is_active) 상태만 true로 업데이트
+                const p = existingPlayers[0];
+                if (!p.is_active) {
+                    await supabaseClient.from('game_players').update({ is_active: true, is_ready: false }).eq('room_code', state.roomCode).eq('user_id', state.user.id);
+                }
             }
+            
             showLoading(false);
             enterGame();
         };
@@ -243,14 +272,14 @@
             document.getElementById('room-info-display').innerText = `[공유] ${state.roomData.room_name} (BOMBER_MODE)`;
             
             const isMe = state.players.find(p => p.user_id === state.user.id);
-            // 💡 픽스 2: 만약 DB 에러로 인해 내가 방에 없게 되더라도 무한 로딩이 돌지 않게 에러 메시지 출력
+            // 💡 혹시라도 내 상태가 동기화되지 않았다면 에러 메세지를 띄웁니다.
             if (!isMe) {
-                document.getElementById('display-theme').innerText = "#ERR_PLAYER_NOT_FOUND (새로고침 요망)";
-                document.getElementById('player-board-container').innerHTML = `<div class="text-center text-red-500 text-xs py-10 font-bold">플레이어 DB 초기화에 실패했습니다.<br>브라우저를 새로고침 하거나 로비로 나갔다 들어와주세요.</div>`;
+                document.getElementById('display-theme').innerText = "#ERR_SYNC_FAIL";
+                document.getElementById('display-theme').classList.add('text-red-500');
+                document.getElementById('player-board-container').innerHTML = `<div class="text-center text-red-500 text-xs py-10 font-bold bg-red-50 border border-red-200 rounded-md mx-4">상태 동기화 지연.<br>브라우저를 새로고침 해주세요.</div>`;
                 return;
             }
 
-            // 💡 픽스 3: Object.assign을 활용해 빈 배열이나 빈 객체가 반환되어도 에러가 나지 않도록 단단하게 결합
             let gs = { stage: 'waiting', danger: 0, turnIdx: 0, yNums: [], rNums: [], slots: [], msg: "" };
             if (state.roomData.status !== 'waiting') { 
                 try { 
@@ -335,7 +364,6 @@
                 const isMine = (slot.ownerId === state.user.id);
                 let rowBg = (activePlayerId === slot.ownerId && isPlaying) ? "bg-[#f1f3f4]" : "bg-white";
                 
-                // 💡 픽스 4: 2인 보드일 때 "내 판(1)", "상대방의 판(1)" 처럼 뷰어(나)의 시점에 맞춰 레이블 동적 생성
                 let ownerSlotCount = gs.slots.filter(s => s.ownerId === slot.ownerId);
                 let bIdx = ownerSlotCount.indexOf(slot) + 1;
                 let labelSuffix = ownerSlotCount.length > 1 ? ` (${bIdx})` : "";
@@ -411,7 +439,6 @@
 
             let slots = [];
             if (readyPlayers.length === 2) {
-                // 💡 픽스 5: 하드코딩된 레이블을 지우고, 렌더링 할 때 누구의 시점인지에 따라 레이블을 동적 생성합니다.
                 slots.push({ ownerId: readyPlayers[0].user_id, ownerName: readyPlayers[0].user_name, cards: [] });
                 slots.push({ ownerId: readyPlayers[0].user_id, ownerName: readyPlayers[0].user_name, cards: [] });
                 slots.push({ ownerId: readyPlayers[1].user_id, ownerName: readyPlayers[1].user_name, cards: [] });
@@ -540,7 +567,6 @@
 
         async function handleChatSubmit(e) {
             e.preventDefault(); const i = document.getElementById('chat-input'); const m = i.value.trim(); if(!m) return; i.value = ""; i.focus();
-            // 💡 픽스 6: DB 통신 에러를 막기 위해 color 더미 추가 삽입
             await supabaseClient.from('game_chat').insert([{ room_code: state.roomCode, user_name: state.user.user_metadata.display_name, color: '#333333', message: m }]);
         }
 
