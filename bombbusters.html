@@ -142,8 +142,8 @@
 
     <script>
         const supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-        // 무채색 슬랙 방지용 컬러 리스트
-        const COLORS = ["#777777", "#555555", "#333333", "#444444", "#666666", "#222222", "#888888", "#999999", "#aaaaaa", "#bbbbbb"];
+        // 💡 [수정 완료]: 채도가 살아있어 눈에 잘 띄는 고채도 비비드 테마 컬러 리스트
+        const COLORS = ["#EA4335", "#34A853", "#4285F4", "#FBBC05", "#109618", "#990099", "#0099C6", "#DD4477", "#66AA00", "#B82E2E"];
         const state = { user: null, roomCode: null, roomData: null, players: [], selectedCards: [] };
 
         function showToast(msg) { const toast = document.getElementById('toast'); toast.innerText = msg; toast.classList.remove('opacity-0', 'translate-y-5'); setTimeout(() => toast.classList.add('opacity-0', 'translate-y-5'), 2000); }
@@ -176,7 +176,6 @@
             const { data: room, error: roomErr } = await supabaseClient.from('game_rooms').select('*').eq('room_code', state.roomCode).single();
             if (roomErr || !room) { alert("존재하지 않는 방입니다."); return goToLobby(); }
 
-            // 💡 [입장 차단 해결]: single() 대신 select()를 사용하여 안전하게 레코드 스캔
             const { data: existingPlayers, error: fetchErr } = await supabaseClient.from('game_players')
                 .select('*')
                 .eq('room_code', state.roomCode)
@@ -184,26 +183,27 @@
 
             if (fetchErr) { alert("플레이어 정보 조회 실패: " + fetchErr.message); return goToLobby(); }
 
-            showLoading(false);
+            const initBoard = JSON.stringify({ keyword: "", guessed: false, spectator: false });
 
-            // 💡 [새로고침 우회 / 컬러 재선택 라우팅]
-            if (existingPlayers && existingPlayers.length > 0 && existingPlayers[0].is_active && existingPlayers[0].color) {
-                // 이미 온전한 컬러를 들고 활성화된 상태(단순 새로고침)라면 바로 방 진입
-                enterGame();
-            } else {
-                // 신규 입장 또는 방에서 나갔다가 재입장한 상태라면 컬러 선택 모달 창 실행
+            if (!existingPlayers || existingPlayers.length === 0) {
                 showColorSelection();
+            } else {
+                const p = existingPlayers[0];
+                if (p.is_active && p.color) {
+                    enterGame();
+                } else {
+                    showColorSelection();
+                }
             }
+            showLoading(false);
         };
 
-        // 💡 컬러 선택 모달창 생성 기능
         async function showColorSelection() {
             document.getElementById('screen-game').classList.add('hidden');
             document.getElementById('screen-color').classList.remove('hidden');
             document.getElementById('screen-color').classList.add('flex');
 
             showLoading(true);
-            // 현재 방에 들어와 있는 다른 실시간 플레이어들이 선점한 컬러 스캔
             const { data: takenPlayers } = await supabaseClient.from('game_players')
                 .select('color')
                 .eq('room_code', state.roomCode)
@@ -215,24 +215,17 @@
             
             grid.innerHTML = COLORS.map(c => {
                 const isTaken = takenColors.includes(c);
-                return `<button onclick="${isTaken ? '' : `selectColor('${c}')`}" class="w-full aspect-square border border-[#ccc] transition-all ${isTaken ? 'opacity-10 cursor-not-allowed' : 'hover:border-[#333] hover:shadow-inner'}" style="background-color: ${c}"></button>`;
+                return `<button onclick="${isTaken ? '' : `selectColor('${c}')`}" class="w-full aspect-square border border-[#ccc] rounded-md transition-all ${isTaken ? 'opacity-10 cursor-not-allowed' : 'hover:scale-105 hover:shadow-md'}" style="background-color: ${c}"></button>`;
             }).join('');
         }
 
-        // 💡 컬러 선택 확정 시 레코드 바인딩 로직
         async function selectColor(color) {
             showLoading(true);
-            
-            const { data: existingPlayers } = await supabaseClient.from('game_players')
-                .select('*')
-                .eq('room_code', state.roomCode)
-                .eq('user_id', state.user.id);
-
+            const { data: existingPlayers } = await supabaseClient.from('game_players').select('*').eq('room_code', state.roomCode).eq('user_id', state.user.id);
             const initBoard = JSON.stringify({ keyword: "", guessed: false, spectator: false });
             let error = null;
 
             if (!existingPlayers || existingPlayers.length === 0) {
-                // 완전히 처음 생성해서 들어오는 방인 경우 INSERT
                 const { error: insErr } = await supabaseClient.from('game_players').insert([{ 
                     room_code: state.roomCode, 
                     user_id: state.user.id, 
@@ -244,7 +237,6 @@
                 }]);
                 error = insErr;
             } else {
-                // 나갔다가 다시 방 코드를 치고 재입장하는 경우 UPDATE
                 const { error: updErr } = await supabaseClient.from('game_players').update({ 
                     color: color, 
                     is_active: true, 
@@ -332,11 +324,7 @@
             document.getElementById('room-info-display').innerText = `[공유] ${state.roomData.room_name} (BOMBER_MODE)`;
             
             const isMe = state.players.find(p => p.user_id === state.user.id);
-            if (!isMe) {
-                // 💡 만약 세션 이탈 후 재입장 중이라면 자동으로 컬러 선택 창으로 라우팅
-                showColorSelection();
-                return;
-            }
+            if (!isMe) { showColorSelection(); return; }
 
             let gs = { stage: 'waiting', danger: 0, turnIdx: 0, yNums: [], rNums: [], slots: [], msg: "" };
             if (state.roomData.status !== 'waiting') { 
@@ -426,11 +414,15 @@
                 let bIdx = ownerSlotCount.indexOf(slot) + 1;
                 let labelSuffix = ownerSlotCount.length > 1 ? ` (${bIdx})` : "";
                 let finalLabel = isMine ? `★ 내 판${labelSuffix}` : `${slot.ownerName}의 판${labelSuffix}`;
+                
+                // 💡 [수정 완료]: 할당된 채도 높은 고유 컬러 코드 추출
+                let playerInfo = state.players.find(p => p.user_id === slot.ownerId);
+                let labelColor = playerInfo ? playerInfo.color : "#555555";
 
                 bHtml += `
                 <div class="border border-[#e2e3e3] ${rowBg} rounded-sm overflow-hidden flex flex-col md:flex-row shadow-sm">
-                    <div class="bg-[#f8f9fa] border-b md:border-b-0 md:border-r border-[#e2e3e3] px-3 py-2 flex items-center md:w-32 flex-shrink-0">
-                        <span class="text-xs font-black text-[#333] ${isMine?'underline text-[#1a73e8]':''} truncate w-full">${finalLabel}</span>
+                    <div class="bg-[#f8f9fa] border-b md:border-b-0 md:border-r border-[#e2e3e3] px-3 py-2 flex items-center md:w-32 flex-shrink-0" style="border-left: 4px solid ${labelColor};">
+                        <span class="text-xs font-black ${isMine?'underline text-[#1a73e8]':'text-[#333]'} truncate w-full">${finalLabel}</span>
                     </div>
                     <div class="p-2 flex flex-wrap gap-1.5 flex-1">`;
                 
@@ -479,18 +471,26 @@
             startGame(yC, rC);
         }
 
+        function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { let j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
         async function startGame(yCount, rCount) {
             showLoading(true);
             const readyPlayers = state.players.filter(p => p.is_ready);
             if (readyPlayers.length < 2) { showLoading(false); return showToast("2명 이상 준비가 필요합니다."); }
 
+            // 💡 [핵심 엔진 픽스]: 비보안(HTTP) 환경 및 모바일 디바이스에서 크래시를 유발하던 crypto.randomUUID 대신 안정적인 무작위 ID 컴파일러 내장
             let deck = [];
-            for (let i = 1; i <= 12; i++) { for (let k = 0; k < 4; k++) deck.push({ id: crypto.randomUUID(), num: i, type: 'normal', state: 'hidden' }); }
+            for (let i = 1; i <= 12; i++) { 
+                for (let k = 0; k < 4; k++) {
+                    deck.push({ id: Math.random().toString(36).substring(2, 11) + Date.now().toString(36), num: i, type: 'normal', state: 'hidden' }); 
+                } 
+            }
             let nums = [1,2,3,4,5,6,7,8,9,10,11,12];
             let yNums = shuffle([...nums]).slice(0, yCount);
             let rNums = shuffle([...nums]).slice(0, rCount);
-            yNums.forEach(n => deck.push({ id: crypto.randomUUID(), num: parseFloat(n + ".1"), type: 'yellow', state: 'hidden' }));
-            rNums.forEach(n => deck.push({ id: crypto.randomUUID(), num: parseFloat(n + ".5"), type: 'red', state: 'hidden' }));
+            
+            yNums.forEach(n => deck.push({ id: Math.random().toString(36).substring(2, 11) + Date.now().toString(36), num: parseFloat(n + ".1"), type: 'yellow', state: 'hidden' }));
+            rNums.forEach(n => deck.push({ id: Math.random().toString(36).substring(2, 11) + Date.now().toString(36), num: parseFloat(n + ".5"), type: 'red', state: 'hidden' }));
             shuffle(deck);
 
             let slots = [];
@@ -621,17 +621,11 @@
             document.getElementById('chat-messages').innerHTML = ''; showLoading(false); showToast("초기화 완료");
         }
 
-        // 💡 [방 나가기 세션 완전 이탈 픽스]
         function confirmLeaveRoom() { 
             closeRoomManage(); 
             openConfirmModal("방에서 완전히 나가시겠습니까?\n(선택하신 레이블 색상이 다른 유저에게 반환됩니다.)", async () => { 
                 showLoading(true); 
-                // 나갈 때 내 레코드의 색상 선점을 제거(null)하여 중복 제약을 해제하고 반환합니다.
-                await supabaseClient.from('game_players').update({ 
-                    is_active: false, 
-                    is_ready: false, 
-                    color: null 
-                }).eq('room_code', state.roomCode).eq('user_id', state.user.id); 
+                await supabaseClient.from('game_players').update({ is_active: false, is_ready: false, color: null }).eq('room_code', state.roomCode).eq('user_id', state.user.id); 
                 goToLobby(); 
             }); 
         }
@@ -650,8 +644,10 @@
             if (isSystem) {
                 d.innerHTML = `<div class="text-[9px] md:text-[10px] font-black text-[#5f6368] mb-0.5 flex justify-center w-full bg-[#f1f3f4] py-1 rounded-sm">${msg}</div>`;
             } else {
-                const bubbleStyle = isMe ? 'bg-[#333] text-white rounded-tr-none' : 'bg-white border border-[#ccc] text-[#333] shadow-sm rounded-tl-none border-l-2 border-l-[#5f6368]';
-                d.innerHTML = `<div class="text-[9px] md:text-[10px] font-bold text-[#333] mb-0.5 flex items-center gap-1">${c.user_name} ${isMe ? '<span class="text-[#9aa0a6] font-normal">(나)</span>' : ''}</div><div class="chat-bubble px-2 py-1 ${bubbleStyle} w-fit max-w-[85%] break-all text-xs md:text-sm">${msg}</div>`;
+                let playerInfo = state.players.find(p => p.user_name === c.user_name);
+                let chatColor = playerInfo ? playerInfo.color : "#5f6368";
+                const bubbleStyle = isMe ? 'bg-[#333] text-white rounded-tr-none' : 'bg-white border border-[#ccc] text-[#333] shadow-sm rounded-tl-none';
+                d.innerHTML = `<div class="text-[9px] md:text-[10px] font-bold text-[#333] mb-0.5 flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full" style="background-color: ${chatColor}"></div>${c.user_name} ${isMe ? '<span class="text-[#9aa0a6] font-normal">(나)</span>' : ''}</div><div class="chat-bubble px-2 py-1 ${bubbleStyle} w-fit max-w-[85%] break-all text-xs md:text-sm" style="border-left-color: ${chatColor};">${msg}</div>`;
             }
             box.appendChild(d); box.scrollTop = box.scrollHeight;
         }
