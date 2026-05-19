@@ -149,13 +149,25 @@
         function showLoading(show) { document.getElementById('loading').classList.toggle('hidden', !show); }
         function goToLobby() { window.location.href = 'index.html'; }
 
-        // 💡 [복구 완료]: 유실되었던 배열 스위칭 엔진 로직 재생성
         function shuffle(a) { 
             for (let i = a.length - 1; i > 0; i--) { 
                 let j = Math.floor(Math.random() * (i + 1)); 
                 [a[i], a[j]] = [a[j], a[i]]; 
             } 
             return a; 
+        }
+
+        function parseBoard(raw) {
+            const defaultBoard = { keyword: "", guessed: false, spectator: false };
+            if (!raw) return defaultBoard;
+            if (typeof raw === 'object' && !Array.isArray(raw)) return Object.assign({}, defaultBoard, raw);
+            if (typeof raw === 'string') { 
+                try { 
+                    let parsed = JSON.parse(raw); 
+                    return (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) ? Object.assign({}, defaultBoard, parsed) : defaultBoard; 
+                } catch(e) { return defaultBoard; } 
+            }
+            return defaultBoard;
         }
 
         window.onload = async () => {
@@ -336,27 +348,19 @@
             let dEl = document.getElementById('display-theme');
             dEl.className = "flex-1 px-3 font-mono font-bold outline-none truncate transition-colors duration-300 text-[#333]";
             
-            document.getElementById('btn-ready').classList.toggle('hidden', isPlaying || isOver);
-            document.getElementById('btn-start').classList.toggle('hidden', isPlaying || isOver);
-            document.getElementById('btn-hint').classList.toggle('hidden', true);
-            document.getElementById('btn-play').classList.toggle('hidden', true);
-
+            // 💡 [핵심 버그 수정 1]: 버튼 클래스 덮어쓰기로 인한 hidden 속성 소멸 버그를 해결한 안전한 동적 바인딩 로직
             const btnReady = document.getElementById('btn-ready');
             btnReady.innerText = isMe.is_ready ? "준비 취소" : "참가 (Ready)";
-            if(isMe.is_ready) btnReady.className = "bg-[#f1f3f4] text-[#333] border border-[#ccc] px-3 py-1 font-bold";
-            else btnReady.className = "bg-white text-[#333] border border-[#ccc] px-3 py-1 hover:bg-[#f1f3f4] font-bold shadow-sm";
+            btnReady.className = `${isPlaying || isOver ? 'hidden ' : ''}px-3 py-1 transition-colors whitespace-nowrap font-bold shadow-sm border border-[#ccc] ${isMe.is_ready ? 'bg-[#f1f3f4] text-[#333]' : 'bg-white text-[#333] hover:bg-[#f1f3f4]'}`;
 
             const btnStart = document.getElementById('btn-start');
-            
-            if (isMe.is_ready) {
-                btnStart.disabled = false;
-                btnStart.classList.remove('opacity-40', 'cursor-not-allowed');
-            } else {
-                btnStart.disabled = true;
-                btnStart.classList.add('opacity-40', 'cursor-not-allowed');
-            }
+            btnStart.className = `${isPlaying || isOver ? 'hidden ' : ''}px-3 py-1 transition-colors whitespace-nowrap font-bold shadow-sm border border-[#333] ${isMe.is_ready ? 'bg-[#333] text-white hover:bg-black' : 'bg-[#333] text-white opacity-40 cursor-not-allowed'}`;
+            btnStart.disabled = !isMe.is_ready;
 
             let activePlayerId = null;
+            let showHint = false;
+            let showPlay = false;
+
             if (isPlaying && gs.slots && gs.slots.length > 0) {
                 let uniqueOwners = [...new Set(gs.slots.map(s => s.ownerId))];
                 activePlayerId = uniqueOwners[gs.turnIdx % Math.max(uniqueOwners.length, 1)];
@@ -366,13 +370,13 @@
                     dEl.innerText = `=PHASE_HINT(Turn: "${activeName}", Danger: ${gs.danger}) | ${gs.msg}`;
                     if (activePlayerId === state.user.id) {
                         dEl.classList.add('bg-[#e8f0fe]');
-                        document.getElementById('btn-hint').classList.remove('hidden');
+                        showHint = true;
                     }
                 } else {
                     dEl.innerText = `=PHASE_PLAY(Turn: "${activeName}", Danger: ${gs.danger}) | ${gs.msg}`;
                     if (activePlayerId === state.user.id) {
                         dEl.classList.add('bg-[#fce8e6]');
-                        document.getElementById('btn-play').classList.remove('hidden');
+                        showPlay = true;
                     }
                 }
             } else if (isOver) {
@@ -381,6 +385,9 @@
             } else {
                 dEl.innerText = `=WAITING_READY(Count: ${state.players.filter(p=>p.is_ready).length}/${state.players.length})`;
             }
+
+            document.getElementById('btn-hint').className = `${showHint ? '' : 'hidden '}bg-[#1a73e8] text-white border border-[#1a73e8] px-4 py-1.5 hover:bg-[#1557b0] transition-colors whitespace-nowrap font-black shadow-sm`;
+            document.getElementById('btn-play').className = `${showPlay ? '' : 'hidden '}bg-[#c5221f] text-white border border-[#c5221f] px-4 py-1.5 hover:bg-[#a50e0e] transition-colors whitespace-nowrap font-black shadow-sm`;
 
             const refHeader = document.getElementById('reference-header');
             if (isPlaying || isOver) {
@@ -464,6 +471,22 @@
             board.innerHTML = bHtml;
         }
 
+        // 💡 [핵심 버그 수정 2]: 버튼 연타를 방지하면서도 에러 발생 시 즉각 해제하도록 try/catch/finally 안전 조치 추가
+        async function toggleReady() { 
+            const me = state.myPlayerInfo;
+            if (!me) return;
+            const btn = document.getElementById('btn-ready');
+            if (btn) btn.disabled = true;
+            try {
+                const { error } = await supabaseClient.from('game_players').update({ is_ready: !me.is_ready }).eq('room_code', state.roomCode).eq('user_id', state.user.id); 
+                if (error) throw error;
+            } catch (err) {
+                alert("상태 변경 오류: " + err.message);
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
         function openSetupModal() {
             document.getElementById('modal-setup').classList.remove('hidden');
         }
@@ -483,6 +506,8 @@
             showLoading(true);
             const btnStart = document.getElementById('btn-start');
             try {
+                if(btnStart) btnStart.disabled = true;
+                
                 const readyPlayers = state.players.filter(p => p.is_ready);
                 if (readyPlayers.length < 2) { 
                     showLoading(false); if(btnStart) btnStart.disabled = false;
@@ -524,16 +549,19 @@
 
                 const gs = { stage: 'hint', danger: readyPlayers.length, turnIdx: 0, hintsGiven: 0, yNums, rNums, slots, msg: "게임을 시작합니다! 안전한 패를 하나 골라 힌트로 공개하세요." };
 
+                // 💡 [관전자 모드 픽스]: 참가하지 않은 인원을 강퇴하지 않고 관전자로 변경하여 유지
+                const specBoard = JSON.stringify({ keyword: "", guessed: false, spectator: true });
                 const unready = state.players.filter(p => !p.is_ready);
                 for(let p of unready) { 
-                    await supabaseClient.from('game_players').update({ is_active: false, is_ready: false }).eq('room_code', state.roomCode).eq('user_id', p.user_id); 
+                    await supabaseClient.from('game_players').update({ board_state: specBoard, is_ready: false }).eq('room_code', state.roomCode).eq('user_id', p.user_id); 
                 }
                 
                 const { error: roomUpdErr } = await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs), status: 'playing' }).eq('room_code', state.roomCode);
                 if (roomUpdErr) throw roomUpdErr;
 
             } catch (err) {
-                alert("게임 시작 프로세스 데이터 오류: " + err.message);
+                alert("게임 시작 프로세스 오류: " + err.message);
+                if(btnStart) btnStart.disabled = false;
             } finally {
                 showLoading(false);
             }
@@ -639,10 +667,18 @@
         function confirmRestartGame() { openConfirmModal("방 데이터를 초기화하시겠습니까?\n(대기실로 돌아갑니다)", handleRestartGame); }
         async function handleRestartGame() {
             showLoading(true);
-            await supabaseClient.from('game_rooms').update({ status: 'waiting', current_theme: '' }).eq('room_code', state.roomCode);
-            await supabaseClient.from('game_players').update({ is_ready: false }).eq('room_code', state.roomCode);
-            await supabaseClient.from('game_chat').delete().eq('room_code', state.roomCode);
-            document.getElementById('chat-messages').innerHTML = ''; showLoading(false); showToast("초기화 완료");
+            try {
+                await supabaseClient.from('game_rooms').update({ status: 'waiting', current_theme: '' }).eq('room_code', state.roomCode);
+                const initBoard = JSON.stringify({ keyword: "", guessed: false, spectator: false });
+                await supabaseClient.from('game_players').update({ is_ready: false, board_state: initBoard }).eq('room_code', state.roomCode);
+                await supabaseClient.from('game_chat').delete().eq('room_code', state.roomCode);
+                document.getElementById('chat-messages').innerHTML = ''; 
+                showToast("초기화 완료");
+            } catch (err) {
+                alert("초기화 오류: " + err.message);
+            } finally {
+                showLoading(false);
+            }
         }
 
         function confirmLeaveRoom() { 
