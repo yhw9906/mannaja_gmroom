@@ -142,8 +142,8 @@
 
     <script>
         const supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-        // 💡 [수정 완료]: 채도가 살아있어 눈에 잘 띄는 고채도 비비드 테마 컬러 리스트
-        const COLORS = ["#EA4335", "#34A853", "#4285F4", "#FBBC05", "#109618", "#990099", "#0099C6", "#DD4477", "#66AA00", "#B82E2E"];
+        // 💡 [원복 완료]: 다른 게임(마음의 실타래, 스트림스 등)에서 연동해 쓰던 오리지널 친숙한 10색 비비드 팔레트 세팅
+        const COLORS = ["#ea4335", "#f29900", "#fbbc04", "#34a853", "#46bdc6", "#4285f4", "#8ab4f8", "#9334e6", "#f06292", "#9aa0a6"];
         const state = { user: null, roomCode: null, roomData: null, players: [], selectedCards: [] };
 
         function showToast(msg) { const toast = document.getElementById('toast'); toast.innerText = msg; toast.classList.remove('opacity-0', 'translate-y-5'); setTimeout(() => toast.classList.add('opacity-0', 'translate-y-5'), 2000); }
@@ -415,7 +415,6 @@
                 let labelSuffix = ownerSlotCount.length > 1 ? ` (${bIdx})` : "";
                 let finalLabel = isMine ? `★ 내 판${labelSuffix}` : `${slot.ownerName}의 판${labelSuffix}`;
                 
-                // 💡 [수정 완료]: 할당된 채도 높은 고유 컬러 코드 추출
                 let playerInfo = state.players.find(p => p.user_id === slot.ownerId);
                 let labelColor = playerInfo ? playerInfo.color : "#555555";
 
@@ -473,46 +472,64 @@
 
         function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { let j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
+        // 💡 [수정 완료]: 시작 버튼 클릭 시 발생할 수 있는 모든 오류 요소를 감싸 완전히 방어 조치
         async function startGame(yCount, rCount) {
             showLoading(true);
-            const readyPlayers = state.players.filter(p => p.is_ready);
-            if (readyPlayers.length < 2) { showLoading(false); return showToast("2명 이상 준비가 필요합니다."); }
+            try {
+                const readyPlayers = state.players.filter(p => p.is_ready);
+                if (readyPlayers.length < 2) { 
+                    showLoading(false); 
+                    return showToast("2명 이상 준비가 필요합니다."); 
+                }
 
-            // 💡 [핵심 엔진 픽스]: 비보안(HTTP) 환경 및 모바일 디바이스에서 크래시를 유발하던 crypto.randomUUID 대신 안정적인 무작위 ID 컴파일러 내장
-            let deck = [];
-            for (let i = 1; i <= 12; i++) { 
-                for (let k = 0; k < 4; k++) {
-                    deck.push({ id: Math.random().toString(36).substring(2, 11) + Date.now().toString(36), num: i, type: 'normal', state: 'hidden' }); 
-                } 
+                const me = state.players.find(p => p.user_id === state.user.id);
+                if (!me || !me.is_ready) { 
+                    showLoading(false); 
+                    return showToast("본인이 먼저 참가(Ready)를 눌러야 시작할 수 있습니다."); 
+                }
+
+                let deck = [];
+                for (let i = 1; i <= 12; i++) { 
+                    for (let k = 0; k < 4; k++) {
+                        deck.push({ id: Math.random().toString(36).substring(2, 11) + Date.now().toString(36), num: i, type: 'normal', state: 'hidden' }); 
+                    } 
+                }
+                let nums = [1,2,3,4,5,6,7,8,9,10,11,12];
+                let yNums = shuffle([...nums]).slice(0, yCount);
+                let rNums = shuffle([...nums]).slice(0, rCount);
+                
+                yNums.forEach(n => deck.push({ id: Math.random().toString(36).substring(2, 11) + Date.now().toString(36), num: parseFloat(n + ".1"), type: 'yellow', state: 'hidden' }));
+                rNums.forEach(n => deck.push({ id: Math.random().toString(36).substring(2, 11) + Date.now().toString(36), num: parseFloat(n + ".5"), type: 'red', state: 'hidden' }));
+                shuffle(deck);
+
+                let slots = [];
+                if (readyPlayers.length === 2) {
+                    slots.push({ ownerId: readyPlayers[0].user_id, ownerName: readyPlayers[0].user_name, cards: [] });
+                    slots.push({ ownerId: readyPlayers[0].user_id, ownerName: readyPlayers[0].user_name, cards: [] });
+                    slots.push({ ownerId: readyPlayers[1].user_id, ownerName: readyPlayers[1].user_name, cards: [] });
+                } else {
+                    readyPlayers.forEach(p => slots.push({ ownerId: p.user_id, ownerName: p.user_name, cards: [] }));
+                }
+
+                let curS = 0;
+                while(deck.length > 0) { slots[curS].cards.push(deck.pop()); curS = (curS + 1) % slots.length; }
+                slots.forEach(s => s.cards.sort((a,b) => a.num - b.num));
+
+                const gs = { stage: 'hint', danger: readyPlayers.length, turnIdx: 0, hintsGiven: 0, yNums, rNums, slots, msg: "게임을 시작합니다! 안전한 패를 하나 골라 힌트로 공개하세요." };
+
+                const unready = state.players.filter(p => !p.is_ready);
+                for(let p of unready) { 
+                    await supabaseClient.from('game_players').update({ is_active: false, is_ready: false }).eq('room_code', state.roomCode).eq('user_id', p.user_id); 
+                }
+                
+                const { error: roomUpdErr } = await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs), status: 'playing' }).eq('room_code', state.roomCode);
+                if (roomUpdErr) throw roomUpdErr;
+
+            } catch (err) {
+                alert("게임 시작 프로세스 데이터 오류: " + err.message);
+            } finally {
+                showLoading(false);
             }
-            let nums = [1,2,3,4,5,6,7,8,9,10,11,12];
-            let yNums = shuffle([...nums]).slice(0, yCount);
-            let rNums = shuffle([...nums]).slice(0, rCount);
-            
-            yNums.forEach(n => deck.push({ id: Math.random().toString(36).substring(2, 11) + Date.now().toString(36), num: parseFloat(n + ".1"), type: 'yellow', state: 'hidden' }));
-            rNums.forEach(n => deck.push({ id: Math.random().toString(36).substring(2, 11) + Date.now().toString(36), num: parseFloat(n + ".5"), type: 'red', state: 'hidden' }));
-            shuffle(deck);
-
-            let slots = [];
-            if (readyPlayers.length === 2) {
-                slots.push({ ownerId: readyPlayers[0].user_id, ownerName: readyPlayers[0].user_name, cards: [] });
-                slots.push({ ownerId: readyPlayers[0].user_id, ownerName: readyPlayers[0].user_name, cards: [] });
-                slots.push({ ownerId: readyPlayers[1].user_id, ownerName: readyPlayers[1].user_name, cards: [] });
-            } else {
-                readyPlayers.forEach(p => slots.push({ ownerId: p.user_id, ownerName: p.user_name, cards: [] }));
-            }
-
-            let curS = 0;
-            while(deck.length > 0) { slots[curS].cards.push(deck.pop()); curS = (curS + 1) % slots.length; }
-            slots.forEach(s => s.cards.sort((a,b) => a.num - b.num));
-
-            const gs = { stage: 'hint', danger: readyPlayers.length, turnIdx: 0, hintsGiven: 0, yNums, rNums, slots, msg: "게임을 시작합니다! 안전한 패를 하나 골라 힌트로 공개하세요." };
-
-            const unready = state.players.filter(p => !p.is_ready);
-            for(let p of unready) { await supabaseClient.from('game_players').update({ is_active: false, is_ready: false }).eq('room_code', state.roomCode).eq('user_id', p.user_id); }
-            
-            await supabaseClient.from('game_rooms').update({ current_theme: JSON.stringify(gs), status: 'playing' }).eq('room_code', state.roomCode);
-            showLoading(false);
         }
 
         async function submitHint() {
